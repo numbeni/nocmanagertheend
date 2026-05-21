@@ -424,6 +424,7 @@ export const ConsoleEventType = {
   incident: "incident",
   alert: "alert",
   system: "system",
+  connectivity: "connectivity",
 } as const;
 
 export type ConsoleEventLevel =

@@ -12,7 +12,9 @@ export type NotifEventType =
   | "incident_new"
   | "incident_resolved"
   | "sweep_started"
-  | "sweep_completed";
+  | "sweep_completed"
+  | "connectivity_lost"
+  | "connectivity_restored";
 
 export interface NotifPrefs {
   enabled: boolean;
@@ -302,6 +304,18 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
               "بررسی تمام شد",
               `بررسی ${String(payload.checked ?? 0)} از ${String(payload.siteCount ?? 0)} سایت انجام شد`,
               "sweep_completed",
+            );
+          } else if (type === "connectivity_lost") {
+            fireSweepNotif(
+              "اتصال اینترنت قطع شد",
+              "اتصال به اینترنت در دسترس نیست — بررسی سایت‌ها متوقف می‌شود",
+              "connectivity_lost",
+            );
+          } else if (type === "connectivity_restored") {
+            fireSweepNotif(
+              "اتصال اینترنت برقرار شد",
+              "اتصال به اینترنت مجدداً برقرار شد — بررسی سایت‌ها از سر گرفته می‌شود",
+              "connectivity_restored",
             );
           }
         } catch {}

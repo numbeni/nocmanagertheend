@@ -137,6 +137,17 @@ async function buildSiteStatus(site: Site, serverMap?: Map<number, { id: number;
     }
   }
 
+  // Consecutive successes from the most recent run backwards. Any non-down
+  // status counts as a success for this metric.
+  let consecutiveSuccesses = 0;
+  for (const c of latestRows) {
+    if (c.overallStatus !== "down") {
+      consecutiveSuccesses++;
+    } else {
+      break;
+    }
+  }
+
   const since = new Date(Date.now() - 24 * 3600 * 1000);
   const uptimeRows = await db
     .select({
@@ -198,6 +209,7 @@ async function buildSiteStatus(site: Site, serverMap?: Map<number, { id: number;
     sslDaysRemaining,
     overallStatus: displayStatus,
     consecutiveFailures,
+    consecutiveSuccesses,
     uptime24h: Math.round(uptime24h * 100) / 100,
     openIncidentId: openIncident?.id ?? null,
     serverId: site.serverId ?? null,

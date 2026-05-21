@@ -83,6 +83,7 @@ interface SiteRecord {
   currentlyFine: boolean;
   enabled: boolean;
   consecutiveFailures: number;
+  consecutiveSuccesses: number;
   errorType: string | null;
   errorMessage: string | null;
 }
@@ -416,7 +417,11 @@ function CompactSiteCard({ site, onRefetch, t }: { site: SiteRecord; onRefetch: 
             {reason ? (
               <span className="text-[9px] text-orange-400/80 truncate block leading-tight">{reason}</span>
             ) : (site.overallStatus === "up" || site.currentlyFine) ? (
-              <span className="text-[9px] text-green-500/50 dark:text-green-400/40 truncate block leading-tight">{t("dash.consecutiveOk")}</span>
+              <span className="text-[9px] text-green-500/50 dark:text-green-400/40 truncate block leading-tight font-mono">
+                {site.consecutiveSuccesses >= 3
+                  ? `${site.consecutiveSuccesses}× ${t("dash.consecutiveOk")}`
+                  : t("dash.consecutiveOk")}
+              </span>
             ) : (
               <span className="text-[9px] invisible block leading-tight">—</span>
             )}

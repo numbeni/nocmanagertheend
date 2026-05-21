@@ -30,6 +30,7 @@ const ALL_TYPES: EventType[] = [
   "incident",
   "alert",
   "system",
+  "connectivity",
 ];
 
 const MAX_BUFFER = 1_000;
@@ -67,6 +68,8 @@ function typeBadgeClass(type: EventType): string {
       return "bg-red-100 text-red-700 border border-red-300 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/30";
     case "alert":
       return "bg-orange-100 text-orange-700 border border-orange-300 dark:bg-orange-500/15 dark:text-orange-300 dark:border-orange-500/30";
+    case "connectivity":
+      return "bg-blue-100 text-blue-700 border border-blue-300 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30";
     default:
       return "bg-zinc-100 text-zinc-600 border border-zinc-300 dark:bg-zinc-500/15 dark:text-zinc-300 dark:border-zinc-500/30";
   }

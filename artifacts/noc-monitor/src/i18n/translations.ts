@@ -455,6 +455,7 @@ const en: Dict = {
   "console.filterIncident": "Incident",
   "console.filterAlert": "Alert",
   "console.filterSystem": "System",
+  "console.filterConnectivity": "Connectivity",
   "console.streaming": "Streaming",
   "console.paused": "Paused",
   "console.eventCount": "{count} events buffered",
@@ -1156,6 +1157,8 @@ const en: Dict = {
   "settings.notif.type.incident_resolved": "Incident Resolved",
   "settings.notif.type.sweep_started": "Sweep Started",
   "settings.notif.type.sweep_completed": "Sweep Completed",
+  "settings.notif.type.connectivity_lost": "Connectivity Lost",
+  "settings.notif.type.connectivity_restored": "Connectivity Restored",
   "settings.notif.testBtn": "Test Notification",
   "settings.notif.testDesc": "Fire a test browser notification to verify the setup.",
   "settings.notif.testSent": "Test notification sent!",
@@ -1509,7 +1512,8 @@ const en: Dict = {
   // Dashboard — stats bar new cards
   "dash.currentlyFineCount": "Currently Fine",
   "dash.pausedCount": "Paused",
-  "dash.consecutiveOk": "No failures",
+  "dash.consecutiveOk": "no failures",
+  "dash.consecutiveOkCount": "{n}× no downtime",
 
   // Dashboard — generate report modal (new keys; title/generate/copy already exist above)
   "dash.report.language": "Language",
@@ -1967,6 +1971,7 @@ const fa: Dict = {
   "console.filterIncident": "حادثه",
   "console.filterAlert": "هشدار",
   "console.filterSystem": "سامانه",
+  "console.filterConnectivity": "اتصال شبکه",
   "console.streaming": "در حال پخش",
   "console.paused": "متوقف",
   "console.eventCount": "{count} رخداد در حافظه",
@@ -2602,6 +2607,8 @@ const fa: Dict = {
   "settings.notif.type.incident_resolved": "حادثه حل شد",
   "settings.notif.type.sweep_started": "بررسی شروع شد",
   "settings.notif.type.sweep_completed": "بررسی تمام شد",
+  "settings.notif.type.connectivity_lost": "قطع اتصال اینترنت",
+  "settings.notif.type.connectivity_restored": "اتصال اینترنت برقرار شد",
   "settings.notif.testBtn": "تست اعلان",
   "settings.notif.testDesc": "یک اعلان آزمایشی در مرورگر ارسال کنید تا تنظیمات را تأیید کنید.",
   "settings.notif.testSent": "اعلان آزمایشی ارسال شد!",
@@ -3017,6 +3024,7 @@ const fa: Dict = {
   "dash.currentlyFineCount": "تایید شده سالم",
   "dash.pausedCount": "متوقف",
   "dash.consecutiveOk": "بدون خرابی",
+  "dash.consecutiveOkCount": "{n}× بدون قطعی",
 
   // داشبورد — مودال تهیه گزارش (کلیدهای جدید فقط)
   "dash.report.language": "زبان",

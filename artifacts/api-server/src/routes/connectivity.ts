@@ -13,6 +13,7 @@ function serializeState() {
   return {
     status: state.status,
     isChecking: state.isChecking,
+    currentlyCheckingTarget: state.currentlyCheckingTarget,
     results: state.results.map((r) => ({
       id: r.id,
       name: r.name,

@@ -120,7 +120,7 @@ function LayoutStatusBar({
   liveState: Record<string, unknown> | null | undefined;
   t: (k: string) => string;
 }) {
-  const { data: connStatus } = useQuery<{ status: string; nextRetryAt?: string | null }>({
+  const { data: connStatus } = useQuery<{ status: string; nextRetryAt?: string | null; currentlyCheckingTarget?: string | null }>({
     queryKey: ["connectivity-status-bar"],
     queryFn: () => fetch("/api/connectivity/status", { credentials: "include" }).then((r) => r.json()),
     refetchInterval: 5000,
@@ -284,6 +284,9 @@ function LayoutStatusBar({
               <span className="h-1.5 w-1.5 rounded-full flex-shrink-0 bg-blue-400 animate-ping" />
               <span className="text-[11px] font-medium text-muted-foreground">
                 {t("connectivity.statusBar.checking")}
+                {connStatus?.currentlyCheckingTarget && (
+                  <span className="ms-1 text-blue-400">· {connStatus.currentlyCheckingTarget}</span>
+                )}
               </span>
             </>
           ) : (

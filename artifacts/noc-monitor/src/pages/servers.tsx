@@ -262,7 +262,7 @@ function ServerFormDialog({
   );
 }
 
-type SiteStatusRecord = { id: number; name: string; url: string; host: string; serverId: number | null; overallStatus: string; responseTimeMs?: number | null };
+type SiteStatusRecord = { id: number; name: string; url: string; host: string; serverId: number | null; overallStatus: string; responseTimeMs?: number | null; consecutiveSuccesses?: number };
 
 function statusDotClass(status: string): string {
   switch (status) {
@@ -355,19 +355,28 @@ function ServerSiteList({ serverId, sites }: { serverId: number; sites: SiteStat
     <div className="space-y-0.5 mt-2 max-h-48 overflow-y-auto">
       {sorted.map((site) => (
         <Link key={site.id} href={`/sites/${site.id}`}>
-          <div className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50 transition-colors cursor-pointer group">
-            <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${statusDotClass(site.overallStatus)}`} />
-            <span className="text-xs font-medium flex-1 truncate group-hover:underline">{site.name}</span>
-            <span className="text-[10px] text-muted-foreground font-mono truncate max-w-[120px] hidden sm:block" dir="ltr">{site.host}</span>
-            <span className={`text-[10px] font-medium flex-shrink-0 ${
-              site.overallStatus === "up" ? "text-green-500 dark:text-green-400" :
-              site.overallStatus === "slow" ? "text-yellow-500 dark:text-yellow-400" :
-              site.overallStatus === "down" || site.overallStatus === "not_stable" ? "text-red-500 dark:text-red-400" :
-              site.overallStatus === "degraded" || site.overallStatus === "blocked" ? "text-orange-500 dark:text-orange-400" :
-              "text-muted-foreground"
-            }`}>
-              {statusLabel(site.overallStatus)}
-            </span>
+          <div className="flex flex-col px-2 py-1.5 rounded hover:bg-muted/50 transition-colors cursor-pointer group">
+            <div className="flex items-center gap-2">
+              <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${statusDotClass(site.overallStatus)}`} />
+              <span className="text-xs font-medium flex-1 truncate group-hover:underline">{site.name}</span>
+              <span className="text-[10px] text-muted-foreground font-mono truncate max-w-[120px] hidden sm:block" dir="ltr">{site.host}</span>
+              <span className={`text-[10px] font-medium flex-shrink-0 ${
+                site.overallStatus === "up" ? "text-green-500 dark:text-green-400" :
+                site.overallStatus === "slow" ? "text-yellow-500 dark:text-yellow-400" :
+                site.overallStatus === "down" || site.overallStatus === "not_stable" ? "text-red-500 dark:text-red-400" :
+                site.overallStatus === "degraded" || site.overallStatus === "blocked" ? "text-orange-500 dark:text-orange-400" :
+                "text-muted-foreground"
+              }`}>
+                {statusLabel(site.overallStatus)}
+              </span>
+            </div>
+            {site.overallStatus === "up" && (site.consecutiveSuccesses ?? 0) >= 3 && (
+              <div className="flex items-center gap-1 pl-4">
+                <span className="text-[9px] font-mono text-green-500/60 dark:text-green-400/50">
+                  {site.consecutiveSuccesses}× no downtime
+                </span>
+              </div>
+            )}
           </div>
         </Link>
       ))}

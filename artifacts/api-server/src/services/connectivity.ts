@@ -22,6 +22,7 @@ export interface TargetResult {
 export interface ConnectivityState {
   status: ConnStatus;
   isChecking: boolean;
+  currentlyCheckingTarget: string | null;
   results: TargetResult[];
   lastOnlineAt: Date | null;
   lastOfflineAt: Date | null;
@@ -90,6 +91,7 @@ const resultsMap = new Map<number, TargetResult>(
 
 let globalStatus: ConnStatus = "unknown";
 let _isChecking = false;
+let _currentlyCheckingTarget: string | null = null;
 let lastOnlineAt: Date | null = null;
 let lastOfflineAt: Date | null = null;
 let lastCheckedAt: Date | null = null;
@@ -120,6 +122,7 @@ export function getConnectivityState(): ConnectivityState {
   return {
     status: globalStatus,
     isChecking: _isChecking,
+    currentlyCheckingTarget: _currentlyCheckingTarget,
     results: Array.from(resultsMap.values()),
     lastOnlineAt,
     lastOfflineAt,
@@ -296,6 +299,15 @@ export async function runConnectivityCheck(singleTargetId?: number): Promise<Con
     const now = new Date();
 
     for (const target of ACTIVE_TARGETS) {
+      _currentlyCheckingTarget = target.name;
+      broadcastSse({
+        type: "connectivity_status",
+        status: "checking",
+        isChecking: true,
+        currentlyCheckingTarget: target.name,
+        results: Array.from(resultsMap.values()),
+        nextRetryAt: nextRetryAt?.toISOString() ?? null,
+      });
       const { ok, avgMs } = await pingHost(target.host, timeoutMs, attempts);
       const existing = resultsMap.get(target.id);
 
@@ -356,6 +368,7 @@ export async function runConnectivityCheck(singleTargetId?: number): Promise<Con
       type: "connectivity_status",
       status: globalStatus,
       isChecking: false,
+      currentlyCheckingTarget: null,
       results: Array.from(resultsMap.values()),
       nextRetryAt: nextRetryAt?.toISOString() ?? null,
     });
@@ -367,6 +380,7 @@ export async function runConnectivityCheck(singleTargetId?: number): Promise<Con
     return globalStatus;
   } finally {
     _isChecking = false;
+    _currentlyCheckingTarget = null;
   }
 }
 

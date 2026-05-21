@@ -899,21 +899,6 @@ export default function SettingsPage() {
 
               <div className="flex items-start justify-between gap-4 border-t pt-6">
                 <div className="space-y-1 max-w-xl">
-                  <Label className="text-sm font-medium">{t("settings.conn.notifications")}</Label>
-                  <p className="text-xs text-muted-foreground">{t("settings.conn.notificationsDesc")}</p>
-                </div>
-                <Switch
-                  checked={connNotifications}
-                  disabled={updateAppSettings.isPending}
-                  onCheckedChange={(v) => {
-                    setConnNotifications(v);
-                    persistSettings({ connectivityNotificationsEnabled: v } as any);
-                  }}
-                />
-              </div>
-
-              <div className="flex items-start justify-between gap-4 border-t pt-6">
-                <div className="space-y-1 max-w-xl">
                   <Label className="text-sm font-medium">{t("settings.conn.checkAfterSweep")}</Label>
                   <p className="text-xs text-muted-foreground">{t("settings.conn.checkAfterSweepDesc")}</p>
                 </div>
@@ -1048,12 +1033,14 @@ function BrowserNotificationsSection() {
   type Sev = "critical" | "warning" | "info";
   const severities: Sev[] = ["critical", "warning", "info"];
 
-  type EvType = "incident_new" | "incident_resolved" | "sweep_started" | "sweep_completed";
+  type EvType = "incident_new" | "incident_resolved" | "sweep_started" | "sweep_completed" | "connectivity_lost" | "connectivity_restored";
   const eventTypes: { key: EvType; label: string; labelFa?: string }[] = [
     { key: "incident_new", label: t("settings.notif.type.incident_new") },
     { key: "incident_resolved", label: t("settings.notif.type.incident_resolved") },
     { key: "sweep_started", label: t("settings.notif.type.sweep_started") },
     { key: "sweep_completed", label: t("settings.notif.type.sweep_completed") },
+    { key: "connectivity_lost", label: t("settings.notif.type.connectivity_lost") },
+    { key: "connectivity_restored", label: t("settings.notif.type.connectivity_restored") },
   ];
 
   const toggleSev = (sev: Sev) => {
