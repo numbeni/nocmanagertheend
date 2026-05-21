@@ -19,6 +19,7 @@ import {
   ChevronDown,
   ChevronRight,
   ClipboardCopy,
+  Download,
   ExternalLink,
   FileText,
   Globe,
@@ -1552,7 +1553,9 @@ function GenerateReportModal({
           ] : []),
           "── وضعیت پایش ──────────────────────────────",
           `  وضعیت sweep: ${sweepStatus}`,
+          `  تعداد سایت‌های پایش‌شده: ${sites.length}`,
           liveState?.lastSweepCompletedAt ? `  آخرین sweep: ${new Intl.DateTimeFormat("fa-IR", { timeZone: "Asia/Tehran", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(liveState.lastSweepCompletedAt))}` : null,
+          (liveState?.lastSweepDurationMs != null) ? `  مدت آخرین sweep: ${fmtSweepDuration(liveState.lastSweepDurationMs, "fa")}` : null,
           "",
           "══════════════════════════════════════════",
           "            پایان گزارش",
@@ -1611,8 +1614,10 @@ function GenerateReportModal({
             "",
           ] : []),
           "── MONITORING ENGINE ──────────────────────",
-          `  Sweep status: ${sweepStatus}`,
-          liveState?.lastSweepCompletedAt ? `  Last sweep: ${new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Tehran", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(liveState.lastSweepCompletedAt))} (Tehran)` : null,
+          `  Sweep status:     ${sweepStatus}`,
+          `  Monitored sites:  ${sites.length}`,
+          liveState?.lastSweepCompletedAt ? `  Last sweep:       ${new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Tehran", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(liveState.lastSweepCompletedAt))} (Tehran)` : null,
+          (liveState?.lastSweepDurationMs != null) ? `  Sweep duration:   ${fmtSweepDuration(liveState.lastSweepDurationMs)}` : null,
           "",
           "==========================================",
           "             END OF REPORT",
@@ -1632,6 +1637,19 @@ function GenerateReportModal({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }).catch(() => {});
+  }
+
+  function handleDownload() {
+    if (!reportText) return;
+    const blob = new Blob([reportText], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `noc-report-${new Date().toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -1681,13 +1699,18 @@ function GenerateReportModal({
               )}
             </Button>
             {reportText && (
-              <Button size="sm" variant="outline" className="h-8 text-xs ml-auto" onClick={handleCopy}>
-                {copied ? (
-                  <><CheckCircle2 className="h-3.5 w-3.5 mr-1.5 text-green-500" />{t("dash.report.copied")}</>
-                ) : (
-                  <><ClipboardCopy className="h-3.5 w-3.5 mr-1.5" />{t("dash.report.copy")}</>
-                )}
-              </Button>
+              <div className="flex items-center gap-2 ml-auto">
+                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={handleCopy}>
+                  {copied ? (
+                    <><CheckCircle2 className="h-3.5 w-3.5 mr-1.5 text-green-500" />{t("dash.report.copied")}</>
+                  ) : (
+                    <><ClipboardCopy className="h-3.5 w-3.5 mr-1.5" />{t("dash.report.copy")}</>
+                  )}
+                </Button>
+                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={handleDownload}>
+                  <Download className="h-3.5 w-3.5 mr-1.5" />{t("dash.report.download")}
+                </Button>
+              </div>
             )}
           </div>
           <Textarea

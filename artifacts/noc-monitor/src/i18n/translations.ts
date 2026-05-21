@@ -512,6 +512,9 @@ const en: Dict = {
   "settings.retention.running": "Running…",
   "settings.retention.done": "Cleanup complete",
   "settings.retention.failed": "Cleanup failed",
+  "settings.retention.presets": "Quick Presets",
+  "settings.retention.impact": "Shorter periods keep the database lean and prevent slowdown during long-term use. Use 'Run Cleanup Now' after saving to apply immediately.",
+  "settings.retention.autoSchedule": "Cleanup also runs automatically at server startup.",
 
   "settings.theme.mode": "Theme",
   "settings.theme.system": "System (auto)",
@@ -2028,6 +2031,9 @@ const fa: Dict = {
   "settings.retention.running": "در حال اجرا…",
   "settings.retention.done": "پاکسازی کامل شد",
   "settings.retention.failed": "پاکسازی ناموفق بود",
+  "settings.retention.presets": "پیش‌تنظیم سریع",
+  "settings.retention.impact": "دوره‌های کوتاه‌تر پایگاه داده را سبک نگه می‌دارند و از کند شدن در استفاده طولانی‌مدت جلوگیری می‌کنند. بعد از ذخیره، «پاکسازی الان» را اجرا کنید تا فوری اعمال شود.",
+  "settings.retention.autoSchedule": "پاکسازی همچنین به‌صورت خودکار هنگام راه‌اندازی سرور اجرا می‌شود.",
 
   "settings.theme.mode": "پوسته",
   "settings.theme.system": "سیستم (خودکار)",

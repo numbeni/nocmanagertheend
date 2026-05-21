@@ -1475,6 +1475,27 @@ function DataRetentionSection() {
     { key: "alertRetentionDays", label: t("settings.retention.alerts"), desc: t("settings.retention.alertsDesc") },
   ];
 
+  const PRESETS = [
+    { label: "Minimal",  checks: 14,  eventLog: 7,  auditLog: 90,  alerts: 30  },
+    { label: "Standard", checks: 90,  eventLog: 30, auditLog: 365, alerts: 90  },
+    { label: "Extended", checks: 365, eventLog: 90, auditLog: 730, alerts: 180 },
+  ] as const;
+
+  function applyPreset(p: typeof PRESETS[number]) {
+    setLocal({
+      checksRetentionDays:   p.checks,
+      eventLogRetentionDays: p.eventLog,
+      auditLogRetentionDays: p.auditLog,
+      alertRetentionDays:    p.alerts,
+    });
+  }
+
+  const isPreset = (p: typeof PRESETS[number]) =>
+    local.checksRetentionDays   === p.checks &&
+    local.eventLogRetentionDays === p.eventLog &&
+    local.auditLogRetentionDays === p.auditLog &&
+    local.alertRetentionDays    === p.alerts;
+
   return (
     <Card>
       <CardHeader>
@@ -1485,12 +1506,40 @@ function DataRetentionSection() {
       </CardHeader>
       <CardContent className="space-y-6">
         {loading ? (
-          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-56 w-full" />
         ) : (
           <>
+            {/* Impact note */}
+            <div className="rounded-md border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+              <p className="text-xs text-amber-400/90 leading-relaxed">{t("settings.retention.impact")}</p>
+            </div>
+
+            {/* Quick presets */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("settings.retention.presets")}</p>
+              <div className="flex gap-2 flex-wrap">
+                {PRESETS.map((p) => (
+                  <Button
+                    key={p.label}
+                    size="sm"
+                    variant={isPreset(p) ? "default" : "outline"}
+                    className="h-7 text-xs gap-1.5"
+                    onClick={() => applyPreset(p)}
+                  >
+                    {p.label}
+                    <span className="text-[10px] opacity-60 font-mono" dir="ltr">
+                      {p.checks}d / {p.eventLog}d / {p.auditLog}d / {p.alerts}d
+                    </span>
+                  </Button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground/70">checks / events / audit / alerts</p>
+            </div>
+
+            {/* Fields grid */}
             <div className="grid gap-6 sm:grid-cols-2">
               {retentionFields.map(({ key, label, desc }) => (
-                <div key={key} className="space-y-2">
+                <div key={key} className="space-y-1.5">
                   <Label className="text-sm font-medium">{label}</Label>
                   <p className="text-xs text-muted-foreground">{desc}</p>
                   <Input
@@ -1508,6 +1557,7 @@ function DataRetentionSection() {
               ))}
             </div>
 
+            {/* Actions */}
             <div className="flex flex-wrap items-center gap-3 pt-2 border-t">
               <Button
                 onClick={handleSave}
@@ -1528,7 +1578,7 @@ function DataRetentionSection() {
                 {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
                 {running ? t("settings.retention.running") : t("settings.retention.runNow")}
               </Button>
-              <p className="text-xs text-muted-foreground">{t("settings.retention.runNowDesc")}</p>
+              <p className="text-xs text-muted-foreground">{t("settings.retention.autoSchedule")}</p>
             </div>
           </>
         )}

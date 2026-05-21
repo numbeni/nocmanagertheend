@@ -323,6 +323,24 @@ export async function runConnectivityCheck(singleTargetId?: number): Promise<Con
         lastFailedAt: ok ? (existing?.lastFailedAt ?? null) : now,
       });
 
+      // High-level summary → main console + event log.
+      // The detailed CMD-style ping output (emitConn) stays in the Connectivity Terminal only.
+      const summaryMs = avgMs !== null ? ` (${avgMs}ms)` : "";
+      emitConsoleEvent({
+        type: "system",
+        level: ok ? "info" : "warn",
+        message: ok
+          ? `🌐 Connectivity: ${target.name} → online${summaryMs}`
+          : `🔴 Connectivity: ${target.name} (${target.host}) → offline`,
+      });
+      logEvent(
+        ok ? "info" : "warn",
+        "connectivity",
+        ok
+          ? `✅ Connectivity: ${target.name} → online${summaryMs}`
+          : `❌ Connectivity: ${target.name} (${target.host}) → offline`,
+      );
+
       if (ok) {
         anyOnline = true;
         // Fast-online: mark online immediately as soon as any target responds

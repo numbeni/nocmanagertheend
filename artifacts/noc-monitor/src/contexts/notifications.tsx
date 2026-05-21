@@ -135,6 +135,9 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   const shownIds = useRef<Set<number>>(readShownIds());
   const prefsRef = useRef(prefs);
   const permissionRef = useRef(permission);
+  // Track whether connectivity_lost was notified this session so we only
+  // fire connectivity_restored if the user was already told about the loss.
+  const connLostFiredRef = useRef(false);
 
   const setPrefs = useCallback((p: NotifPrefs) => {
     setPrefsState(p);
@@ -306,17 +309,22 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
               "sweep_completed",
             );
           } else if (type === "connectivity_lost") {
+            connLostFiredRef.current = true;
             fireSweepNotif(
               "اتصال اینترنت قطع شد",
               "اتصال به اینترنت در دسترس نیست — بررسی سایت‌ها متوقف می‌شود",
               "connectivity_lost",
             );
           } else if (type === "connectivity_restored") {
-            fireSweepNotif(
-              "اتصال اینترنت برقرار شد",
-              "اتصال به اینترنت مجدداً برقرار شد — بررسی سایت‌ها از سر گرفته می‌شود",
-              "connectivity_restored",
-            );
+            // Only notify if we previously told the user the connection was lost.
+            if (connLostFiredRef.current) {
+              connLostFiredRef.current = false;
+              fireSweepNotif(
+                "اتصال اینترنت برقرار شد",
+                "اتصال به اینترنت مجدداً برقرار شد — بررسی سایت‌ها از سر گرفته می‌شود",
+                "connectivity_restored",
+              );
+            }
           }
         } catch {}
       };

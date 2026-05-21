@@ -228,7 +228,7 @@ function LayoutStatusBar({
         </div>
       )}
 
-      {/* Internet connectivity indicator — always visible once status is known */}
+      {/* Offline modal — fixed position, not part of status bar flow */}
       {offlineModalOpen && (
         <div className="fixed bottom-4 end-4 z-50 flex items-start gap-3 p-4 rounded-lg border border-red-500/50 bg-background shadow-lg max-w-sm animate-in fade-in slide-in-from-bottom-2">
           <WifiOff className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
@@ -251,6 +251,22 @@ function LayoutStatusBar({
           </button>
         </div>
       )}
+
+      {/* Live engine target — only when sweeping (adjacent to On Sweep badge) */}
+      {isSweeping && (liveState?.currentSiteName as string | null) && (
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/30 bg-primary/5">
+          <span className="h-1.5 w-1.5 rounded-full flex-shrink-0 bg-primary animate-pulse" />
+          <span className="text-[11px] font-medium whitespace-nowrap" dir="ltr">
+            <span className="text-muted-foreground">{t("dash.liveTargetChecking")}: </span>
+            <span className="text-primary font-semibold">{liveState?.currentSiteName as string}</span>
+            {(liveState?.currentStep as string | null) && (
+              <span className="text-muted-foreground"> · {liveState?.currentStep as string}</span>
+            )}
+          </span>
+        </div>
+      )}
+
+      {/* Internet connectivity indicator — rightmost, click to open /connectivity */}
       <Link href="/connectivity">
         <div className={cn(
           "flex items-center gap-1.5 px-2.5 py-1 rounded-full border whitespace-nowrap cursor-pointer transition-opacity hover:opacity-80",
@@ -299,20 +315,6 @@ function LayoutStatusBar({
           )}
         </div>
       </Link>
-
-      {/* Live engine target — only when sweeping */}
-      {isSweeping && (liveState?.currentSiteName as string | null) && (
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/30 bg-primary/5">
-          <span className="h-1.5 w-1.5 rounded-full flex-shrink-0 bg-primary animate-pulse" />
-          <span className="text-[11px] font-medium whitespace-nowrap" dir="ltr">
-            <span className="text-muted-foreground">{t("dash.liveTargetChecking")}: </span>
-            <span className="text-primary font-semibold">{liveState?.currentSiteName as string}</span>
-            {(liveState?.currentStep as string | null) && (
-              <span className="text-muted-foreground"> · {liveState?.currentStep as string}</span>
-            )}
-          </span>
-        </div>
-      )}
     </div>
   );
 }

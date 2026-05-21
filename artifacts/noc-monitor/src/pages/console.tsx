@@ -20,6 +20,9 @@ import { useT } from "@/i18n/LanguageProvider";
 
 type EventType = ConsoleEvent["type"];
 
+// "connectivity" is intentionally excluded from the main console —
+// the detailed ping output belongs only to the Connectivity Terminal.
+// High-level connectivity summaries arrive as "system" events.
 const ALL_TYPES: EventType[] = [
   "cycle",
   "site",
@@ -30,7 +33,6 @@ const ALL_TYPES: EventType[] = [
   "incident",
   "alert",
   "system",
-  "connectivity",
 ];
 
 const MAX_BUFFER = 1_000;
