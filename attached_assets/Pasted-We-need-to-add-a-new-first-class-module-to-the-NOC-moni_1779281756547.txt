@@ -1,0 +1,399 @@
+We need to add a new first-class module to the NOC monitoring platform called:
+
+Network Connectivity
+
+Please inspect the existing project architecture carefully before implementing this. This feature must be integrated cleanly with the current server-based monitoring engine, sweep pause/resume logic, realtime status bar, sidebar navigation, notification system, settings system, and Persian/English translation system.
+
+Do not break or rewrite existing working behavior unnecessarily.
+
+The goal is not to add an isolated page only. The goal is to add a proper connectivity sentinel system that helps the monitoring engine distinguish between:
+
+1. A monitored website is actually DOWN
+2. The monitoring application itself has lost internet connectivity
+
+You are free to refactor or improve internal architecture wherever needed if you find a cleaner, more production-grade solution. Please implement this in the most professional way possible while keeping the existing product identity, UI style, realtime behavior, and NOC operator workflow intact.
+
+This platform is used under unstable Iranian network conditions, so avoiding false DOWN alerts is extremely important.
+
+==================================================
+NEW MODULE: NETWORK CONNECTIVITY
+==================================================
+
+Add a new sidebar section called:
+
+Network Connectivity
+
+The purpose of this module is to detect whether the monitoring application itself has internet access before marking monitored sites as DOWN.
+
+==================================================
+CORE IDEA
+==================================================
+
+The system should periodically run simple ping checks against a small list of reliable domains/IPs.
+
+Examples:
+- google.com
+- cloudflare.com
+- 1.1.1.1
+- github.com
+
+Example behavior:
+
+ping google.com
+
+If at least one target responds:
+- connectivity = ONLINE
+
+If all enabled targets fail:
+- connectivity = OFFLINE
+
+This should be based on actual backend-side ping execution, not frontend-only browser checks.
+
+==================================================
+WHEN OFFLINE
+==================================================
+
+If all enabled ping targets fail:
+
+- show a popup/modal warning
+- show a persistent status banner
+- show the offline state in the global status bar
+- pause monitoring sweeps safely
+- preserve the current sweep checkpoint
+- do not mark monitored sites as DOWN because of this connectivity loss
+- do not move sites into Critical / Down state because of this connectivity loss
+- do not send false critical/down alerts to Nextcloud or Telegram
+- retry connectivity checks automatically every few seconds
+- allow manual retry from the UI
+
+Popup example:
+
+“Internet connectivity appears to be unavailable. Monitoring is temporarily paused.”
+
+The popup should explain that monitoring is being held to prevent false DOWN alerts.
+
+==================================================
+WHEN CONNECTIVITY RETURNS
+==================================================
+
+As soon as at least one enabled ping target responds again:
+
+- clear the offline popup/banner
+- restore ONLINE state
+- update the global status bar
+- resume monitoring from the previous sweep checkpoint
+- continue the monitoring engine normally
+- optionally send one recovery notification if notification settings allow it
+
+The monitoring engine must not restart the entire sweep from the beginning unless absolutely necessary.
+
+==================================================
+SIDEBAR PAGE
+==================================================
+
+Create a new sidebar page:
+
+Network Connectivity
+
+This page should show:
+
+- current connectivity status
+- ONLINE / OFFLINE / CHECKING
+- list of ping targets
+- ping result for each target
+- response time
+- last successful ping
+- last failed ping
+- retry countdown
+- next scheduled automatic check time
+- manual “Run Check” button for all targets
+- manual check button for each individual target if useful
+
+The page should be operator-friendly, realtime, and visually consistent with the existing NOC dashboard.
+
+==================================================
+TARGET MANAGEMENT
+==================================================
+
+Operators must be able to manage the ping target list from this section.
+
+Operators must be able to:
+
+- add ping targets
+- edit ping targets
+- delete ping targets
+- enable/disable targets
+
+Each target should have:
+
+- id
+- name
+- domain/IP
+- enabled status
+- timeout
+- last ping result
+- last response time
+- last checked time
+- last error if any
+
+The target list must not be hardcoded only. Default targets may be seeded, but operators must be able to change them.
+
+Recommended default targets:
+
+- Google — google.com
+- Cloudflare — cloudflare.com
+- Cloudflare DNS — 1.1.1.1
+- GitHub — github.com
+
+Connectivity should be ONLINE if at least one enabled target responds.
+
+Connectivity should be OFFLINE only if all enabled targets fail.
+
+==================================================
+SETTINGS INTEGRATION
+==================================================
+
+Connectivity check intervals must be configurable from the Settings page.
+
+Operators should be able to configure:
+
+- automatic connectivity check interval while ONLINE
+- retry interval while OFFLINE
+- ping timeout duration
+- number of ping attempts per target
+- whether automatic connectivity checks are enabled
+- whether offline popup should be shown
+- whether monitoring should automatically pause when connectivity is offline
+- whether connectivity offline/online notifications should be sent
+
+Example defaults:
+
+- ONLINE check interval: 10 seconds
+- OFFLINE retry interval: 5 seconds
+- ping timeout: 3000ms
+- attempts per target: 2
+- automatic connectivity checks: enabled
+- pause monitoring while offline: enabled
+
+These settings must affect real backend behavior, not only UI labels.
+
+==================================================
+BACKEND API REQUIREMENTS
+==================================================
+
+Add clean backend APIs for this module.
+
+Suggested endpoints:
+
+- GET /api/connectivity/status
+- GET /api/connectivity/targets
+- POST /api/connectivity/targets
+- PATCH /api/connectivity/targets/:id
+- DELETE /api/connectivity/targets/:id
+- POST /api/connectivity/check
+- POST /api/connectivity/check/:id
+
+The status endpoint should return:
+
+- global connectivity status
+- target results
+- currently checking flag
+- last online time
+- last offline time
+- last check time
+- next check time
+- retry countdown
+- retry count
+- current error summary
+
+==================================================
+MONITORING ENGINE INTEGRATION
+==================================================
+
+This module must integrate with the current server-based sweep monitoring engine.
+
+Before starting a sweep:
+
+- check connectivity status
+- if OFFLINE:
+  - do not start sweep
+  - show “Waiting for internet connectivity”
+  - preserve monitoring state safely
+
+During a sweep:
+
+- if connectivity becomes OFFLINE:
+  - pause/hold the sweep
+  - preserve current sweep progress
+  - preserve current server/site/phase checkpoint
+  - do not mark remaining sites as DOWN
+  - do not send false alerts
+  - wait until connectivity returns
+  - continue from the same checkpoint
+
+This must work with the existing pause/resume sweep memory logic.
+
+==================================================
+FALSE ALERT PREVENTION
+==================================================
+
+If the monitoring app itself has no internet:
+
+- do not move sites into Critical / Down state
+- do not send Nextcloud / Telegram DOWN alerts
+- do not update site statuses to DOWN due to global connectivity failure
+- do not treat sweep failures during offline state as real site failures
+
+Instead:
+
+- show a global connectivity issue
+
+The system must clearly distinguish between:
+
+- monitored site is down
+- monitoring application has lost internet access
+
+This is the main reason for this module.
+
+==================================================
+STATUS BAR INTEGRATION
+==================================================
+
+Add a small dedicated internet connectivity indicator to the global status bar.
+
+Examples:
+
+- Internet: Online
+- Internet: Offline
+- Internet: Checking...
+- Internet: Offline — retrying in 5s
+
+When offline:
+
+- show “Monitoring paused due to connectivity loss”
+- keep current sweep phase/checkpoint visible
+- make the indicator visually clear but not noisy
+
+Use professional colors:
+
+- ONLINE = green
+- OFFLINE = red
+- CHECKING = blue/neutral
+- DISABLED = gray
+
+==================================================
+REALTIME UPDATES
+==================================================
+
+Connectivity state must update live.
+
+Use the existing realtime system if available.
+
+Updates should reflect immediately in:
+
+- Network Connectivity sidebar page
+- global status bar
+- monitoring/sweep status bar
+- popup/banner
+- dashboard indicators if applicable
+
+The frontend must not guess connectivity state locally. Connectivity state should come from the backend as the source of truth.
+
+==================================================
+MANUAL CHECKS
+==================================================
+
+Inside the Network Connectivity page, operators must be able to manually run checks.
+
+Required:
+
+- Run Check button for all enabled targets
+- optional per-target check button
+- show live checking state
+- show result immediately after check
+- show response time and error message if failed
+
+Manual checks should not break automatic scheduling.
+
+==================================================
+NOTIFICATIONS
+==================================================
+
+Integrate with existing Nextcloud Talk / Telegram notification system if appropriate.
+
+When connectivity goes OFFLINE:
+
+- send one offline notification, not repeated spam
+
+When connectivity returns ONLINE:
+
+- send one recovery notification
+
+All notification timestamps must use Iran timezone / Asia/Tehran, consistent with the current project behavior.
+
+Do not send individual site DOWN alerts while global connectivity is OFFLINE.
+
+==================================================
+EMPTY / MISCONFIGURED STATE
+==================================================
+
+If no enabled ping targets exist:
+
+- show clear warning
+- connectivity status should be UNKNOWN or MISCONFIGURED
+- monitoring should warn the operator
+- provide quick action to add default targets
+
+Do not silently assume the internet is online.
+
+==================================================
+UI / UX REQUIREMENTS
+==================================================
+
+The Network Connectivity page should feel like a native part of the current NOC system.
+
+Support:
+
+- dark mode
+- light mode
+- Persian / English translations
+- RTL layout
+- responsive design
+- existing card styles
+- existing status badge styles
+- realtime visual feedback
+
+Operators should instantly understand:
+
+- whether the app is online
+- which ping targets are reachable
+- which ping targets failed
+- when the last successful ping happened
+- when the next retry will run
+- why monitoring is paused
+- how to manually retry
+
+==================================================
+FINAL GOAL
+==================================================
+
+The final result should make the monitoring platform safer and more reliable under unstable network conditions.
+
+The system should stop confusing:
+
+“All monitored websites are down”
+
+with:
+
+“The monitoring application itself lost internet connectivity.”
+
+This feature should be implemented as a first-class part of the NOC monitoring architecture and integrated cleanly with:
+
+- server-based sweep engine
+- pause/resume logic
+- Nextcloud / Telegram alerts
+- dashboard status bar
+- realtime updates
+- sidebar navigation
+- Settings page
+- Persian / English translation system

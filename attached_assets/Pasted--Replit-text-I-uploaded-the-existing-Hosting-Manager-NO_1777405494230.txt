@@ -1,0 +1,314 @@
+این پرامپت نهایی رو بده به Replit:
+
+```text
+I uploaded the existing Hosting Manager / NOC Monitoring project. Please inspect the current code first and implement these changes into the existing architecture, not as a rewrite.
+
+Important:
+- Do not redesign the whole app.
+- Do not rebuild from scratch.
+- Keep the current monorepo, backend, frontend, database, and monitoring architecture.
+- Apply minimal, clean, production-friendly changes.
+- Preserve existing features unless a change is explicitly requested below.
+
+Project context:
+- Backend: Express + TypeScript
+- Frontend: React + Vite
+- Database: PostgreSQL + Drizzle
+- Monitoring dashboard for hosting/NOC operators
+- Existing incidents, dashboard, settings, monitoring engine, and Nextcloud Talk alert system exist.
+
+Required changes:
+
+1. Incident sorting controlled by operator
+
+Do not force a single sorting order for incidents.
+
+Add a sorting option in the Incidents UI so the operator can choose how incidents are sorted.
+
+Supported sorting options:
+- Last modified, newest first
+- Last modified, oldest first
+- Created at, newest first
+- Created at, oldest first
+
+Default sorting:
+- Last modified, newest first
+
+Backend must support query parameters:
+- sortBy = updatedAt | createdAt
+- order = asc | desc
+
+Example:
+GET /api/incidents?sortBy=updatedAt&order=desc
+
+If incidents do not have updatedAt / modifiedAt:
+- Add updatedAt to the incidents table.
+- Update updatedAt whenever:
+  - incident status changes
+  - incident is acknowledged
+  - incident is resolved
+  - incident severity/title/description changes
+
+2. Clear results should also delete site incidents
+
+When clearing monitoring results/history for a site, also delete incidents connected to that site.
+
+Requirement:
+- Delete check history for the site.
+- Delete incidents for the site.
+- Delete related incident notes/logs if the schema has them.
+- Do not delete the site itself.
+
+Update the UI confirmation message to clearly say:
+“This will delete check history and incidents for this site.”
+
+3. Explain how a resolved incident was resolved
+
+When an incident is resolved, the UI should explain how/why it was resolved.
+
+Add fields if needed:
+- resolvedReason
+- resolvedBy
+- resolvedFromCheckId
+- resolvedAt if not already present
+
+Examples:
+- “Resolved automatically after 2 consecutive successful checks.”
+- “Resolved manually by operator.”
+- “Resolved because the site returned HTTP 200 and DNS/TCP checks passed.”
+- “Resolved because monitoring status changed back to UP.”
+
+Backend:
+- When auto-resolving an incident, store a clear resolvedReason.
+- When manually resolving, store resolvedBy = "operator" and a resolvedReason.
+
+Frontend:
+- On incident detail page, show a section:
+  “How it was resolved”
+- On incident list, optionally show a small resolved reason badge/tooltip.
+
+4. Manual toggle for sending alerts to Nextcloud Talk
+
+Add a setting to manually enable or disable sending alerts to Nextcloud Talk.
+
+Setting:
+- nextcloudAlertsEnabled: boolean
+
+Requirement:
+- Editable from Settings page.
+- If disabled, no external Nextcloud messages should be sent.
+- Internal incident creation, monitoring, and logs must continue working.
+- UI should clearly show whether Nextcloud alerts are enabled or disabled.
+
+5. Send Nextcloud down alert only after 2 consecutive down checks
+
+Do not send a Nextcloud alert on the first DOWN result.
+
+Requirement:
+- Check 1 DOWN: do not send Nextcloud message.
+- Check 2 DOWN again: send Nextcloud message.
+- Use existing failureCount if available.
+- If not available, calculate from recent check history.
+- This rule only applies to external Nextcloud messages.
+- Internal monitoring and incident logic should remain intact unless a minimal change is required.
+
+6. Do not send Nextcloud messages for resolved incidents
+
+When an incident is resolved:
+- Do not send any Nextcloud Talk message.
+- Keep the incident resolved internally.
+- Keep internal logs if needed.
+- Only suppress the external resolved notification.
+
+7. Alert messages should use only one language
+
+Currently some messages may be bilingual. Change this.
+
+Add setting:
+- alertLanguage: "fa" | "en"
+
+Requirement:
+- User can choose alert language from Settings page.
+- If alertLanguage = "fa", send only Persian messages.
+- If alertLanguage = "en", send only English messages.
+- Do not send bilingual messages anymore.
+- Apply this to all Nextcloud alert messages.
+
+Persian example:
+🚨 هشدار مهم هاستینگ
+سایت: example.com
+وضعیت: قطع
+علت: خطای DNS
+اقدام پیشنهادی: بررسی DNS و نیم‌سرورها
+
+English example:
+🚨 Critical Hosting Alert
+Site: example.com
+Status: Down
+Cause: DNS Failure
+Suggested action: Check DNS records and nameservers.
+
+8. Make MONITOR_INTERVAL_MS configurable from the website
+
+Add a setting:
+- monitorIntervalMs: number
+
+Requirement:
+- Editable from Settings page.
+- Show it in a user-friendly way, preferably seconds/minutes.
+- Validate value:
+  - minimum: 30000 ms
+  - recommended default: 120000 ms
+- Keep environment variable as fallback:
+  process.env.MONITOR_INTERVAL_MS
+- Database/app setting should override env value once configured.
+- Prefer updating the running monitor interval live.
+- If live update is too risky, apply it on next backend restart and clearly show this in UI.
+
+9. Settings storage
+
+If a settings table/store already exists, use it.
+
+If not, add a simple app_settings table:
+- key
+- value
+- updatedAt
+
+Recommended setting keys:
+- nextcloudAlertsEnabled
+- alertLanguage
+- monitorIntervalMs
+
+10. Dashboard label cleanup
+
+Some dashboard labels currently display raw keys with dashes or technical names, which looks unprofessional.
+
+Requirement:
+- Replace raw/technical labels with clean human-readable labels.
+- Do not show awkward labels like:
+  - dash.statusDistribution
+  - labels with unnecessary dash naming
+- Use clear operator-friendly labels.
+
+Examples:
+Instead of:
+dash.statusDistribution
+
+Show:
+Status Distribution
+or in Persian UI:
+توزیع وضعیت سایت‌ها
+
+Instead of raw keys like:
+site-down
+ssl-expiring
+dns-failure
+
+Show:
+Site Down
+SSL Expiring
+DNS Failure
+
+If the UI is Persian, use clean Persian labels:
+- قطعی سایت
+- انقضای SSL
+- خطای DNS
+- کندی سایت
+- اختلال سرویس
+
+11. Improve dash.statusDistribution chart
+
+The current status distribution chart is not visually good or optimized.
+
+Replace or redesign it as a more professional donut/pie chart.
+
+Requirement:
+- Use a modern donut chart or polished pie chart.
+- Use clear status colors:
+  - Green for healthy/up
+  - Yellow/amber for warning/slow/degraded
+  - Red for critical/down
+  - Gray for unknown/disabled if needed
+  - Optional orange for blocked
+- Show count and/or percentage.
+- Make it readable on the dashboard.
+- Avoid clutter.
+
+Next to the chart, add a legend explaining what each color means.
+
+Legend example:
+- Green: Healthy / Up
+- Yellow: Slow or Degraded
+- Red: Down or Critical Problems
+- Orange: Blocked
+- Gray: Unknown
+
+If Persian UI:
+- سبز: سالم / فعال
+- زرد: کند یا دارای اختلال
+- قرمز: قطع یا بحرانی
+- نارنجی: بلاک‌شده
+- خاکستری: نامشخص
+
+The chart should be responsive and fit nicely in the dashboard card.
+
+12. UI updates
+
+Settings page:
+- Nextcloud alerts enabled/disabled toggle
+- Alert language selector: Persian / English
+- Monitor interval input
+- Save button
+- Clear status text explaining current settings
+
+Incidents page:
+- Sorting dropdown/select
+- Supported sorting options:
+  - Last modified, newest first
+  - Last modified, oldest first
+  - Created at, newest first
+  - Created at, oldest first
+
+Incident detail page:
+- Show “How it was resolved” when incident status is resolved.
+
+Clear history UI:
+- Confirmation must mention that incidents will also be deleted.
+
+Dashboard:
+- Clean dashboard labels.
+- Replace dash.statusDistribution with polished Status Distribution chart.
+- Add color legend next to the chart.
+
+13. API changes
+
+Add or update endpoints as needed:
+- GET /api/settings
+- PUT /api/settings or PATCH /api/settings
+- GET /api/incidents?sortBy=updatedAt|createdAt&order=asc|desc
+
+Use existing routes if already present.
+
+If OpenAPI is used:
+- Update openapi.yaml.
+- Regenerate typed client if required.
+
+14. Quality requirements
+
+- Keep TypeScript types clean.
+- Add error handling.
+- Do not break existing monitoring.
+- Do not remove existing features.
+- Do not hardcode settings.
+- Do not expose secrets to frontend.
+- Keep UI simple and operator-friendly.
+- Preserve current design style as much as possible.
+- Explain changed files after implementation.
+
+After implementation, report:
+1. What files were changed.
+2. What database fields/tables were added.
+3. How to test each new feature.
+4. Whether monitor interval updates live or after restart.
+5. Any required environment variables or Replit Secrets.
+```

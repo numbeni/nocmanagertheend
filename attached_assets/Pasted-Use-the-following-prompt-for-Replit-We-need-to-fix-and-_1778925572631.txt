@@ -1,0 +1,402 @@
+Use the following prompt for Replit:
+
+We need to fix and improve several important issues in the current version of our NOC monitoring platform.
+
+You have access to the full project files. Please inspect the existing architecture carefully before making changes. Do not blindly patch UI only. Understand how the current monitoring engine, SSL module, dashboard overview, site details, sidebar sections, fullscreen monitored sites view, and manual check actions currently work.
+
+The goal is to make the system more reliable, operator-friendly, and production-grade without rewriting the entire project from scratch.
+
+You have full freedom to refactor or improve related code if you find a better, cleaner, more maintainable solution based on the current project structure.
+
+Focus on the following issues.
+
+==================================================
+
+SSL Certificates Section Must Become The Single Source Of Truth
+==================================================
+
+The sidebar already has or should have a dedicated section called:
+
+SSL Certificates
+
+This section must become the only source of truth for SSL-related data across the entire platform.
+
+Add or improve the following features inside the SSL Certificates section:
+
+Run SSL Check On All Sites
+Bulk Import SSL Sites
+Add SSL Site
+Add SSL-only Domain
+Manual SSL Check for one SSL entry
+Last checked time
+Next scheduled scan time
+SSL status summary
+Healthy count
+Expiring soon count
+Invalid count
+Error count
+
+SSL Certificates must support two types of entries:
+
+Domains linked to existing monitored sites
+SSL-only domains that are only tracked for SSL monitoring and are not part of the main monitored websites
+
+The UI should clearly distinguish between normal monitored-site SSL records and SSL-only records.
+
+==================================================
+2. Dashboard SSL Status Card Behavior
+
+The SSL Status card in the Dashboard Overview must no longer open a popup/modal.
+
+Instead, it should behave as a shortcut link to the SSL Certificates page.
+
+When the user clicks the SSL Status card:
+
+navigate directly to the SSL Certificates section/page
+do not open a popup
+do not duplicate SSL data logic inside the dashboard
+
+The SSL Status card should only show a compact preview/summary of the SSL Certificates section.
+
+It should display data from the SSL Certificates module only:
+
+Total SSL Certificates
+Healthy
+Expiring Soon
+Invalid
+Error
+Last SSL Scan
+Next SSL Scan
+
+The dashboard card must not calculate SSL status independently.
+
+==================================================
+3. Remove SSL Checks From Main Site Monitoring
+
+SSL checks must no longer run as part of the main website monitoring sweep.
+
+The main monitoring system should not perform SSL tests while checking websites.
+
+Reason:
+SSL is now managed separately inside the SSL Certificates section.
+
+From now on:
+
+main site monitoring must not run SSL checks
+server-based sweep monitoring must not run SSL checks
+manual run-all monitoring must not include SSL checks
+site detail pages must read SSL information from the SSL Certificates module
+dashboard SSL data must read from the SSL Certificates module
+anywhere SSL data is shown, it must come from the SSL Certificates section data source
+
+This prevents duplicate SSL logic, conflicting statuses, and unnecessary load during main monitoring.
+
+==================================================
+4. SSL Check Scheduling Rules
+
+SSL Check On All Sites is a heavier operation and must not interfere with the main monitoring engine.
+
+Implement correct scheduling and locking behavior.
+
+Rules:
+
+automatic SSL scan should run once every 24 hours
+automatic SSL scan should only run when the main monitoring system is idle or in cooldown
+automatic SSL scan must not start while a monitoring sweep is actively running
+if the main monitoring sweep is running, delay the SSL scan until a safe idle/cooldown moment
+once SSL Check On All Sites starts, the main monitoring sweep must not start again until the SSL scan is finished
+main monitoring should wait until the SSL scan completes
+after SSL scan finishes, main monitoring may resume normally
+SSL checks should run gradually with spacing/delay between sites
+avoid heavy parallel SSL checks
+
+This rule applies to:
+
+automatic 24-hour SSL scan
+manual Run SSL Check On All Sites
+
+Important exception:
+
+Manual SSL Check for one single site/domain can run independently and does not need to block monitoring.
+
+==================================================
+5. Manual Checks Must Have Higher Priority
+
+Any manual check triggered by an operator must have higher priority than background monitoring.
+
+Examples:
+
+manual DNS check
+manual HTTP check
+manual curl check
+manual check from site detail page
+manual check from DNS section
+manual check from diagnostics
+manual check from any operator action
+
+These manual checks must return results quickly.
+
+If the monitoring sweep is running, manual checks should not become slow, blocked, or delayed behind background tasks.
+
+Implement a priority system or separate execution path if needed.
+
+Priority order should be:
+
+Manual single-site / single-feature checks
+Manual single-server checks
+Manual full sweep
+Automatic monitoring sweep
+Automatic SSL batch scan
+
+Manual operator actions are urgent because operators need immediate troubleshooting feedback.
+
+==================================================
+6. Fullscreen Monitored Sites View Fixes
+
+There are issues in the fullscreen Monitored Sites view.
+
+Fix the following:
+
+The buttons below currently do not work correctly in fullscreen mode:
+
+Per Page
+Report
+Run Check On All Sites
+
+They must work exactly the same as in the normal dashboard view.
+
+Requirements:
+
+Per Page must correctly affect the monitored sites display where applicable
+Report must open or generate the correct report
+Run Check On All Sites must trigger the correct full check/sweep
+fullscreen mode must not have disconnected or duplicated broken handlers
+avoid separate broken logic for fullscreen controls
+extract shared logic into reusable hooks/components if needed
+==================================================
+7. Compact Button Availability
+
+The Compact view button must be available even when Monitored Sites is not in fullscreen mode.
+
+Currently compact mode appears to be tied too strongly to fullscreen.
+
+Fix this.
+
+Requirements:
+
+Compact button should appear next to Grid and List controls
+Compact mode should work in normal dashboard mode
+Compact mode should also work in fullscreen mode
+Grid, List, and Compact should feel like equal view modes
+state should remain predictable when switching between normal and fullscreen
+==================================================
+8. Per Page Behavior In Fullscreen Grid / Compact
+
+In fullscreen Grid and Compact views, remove the Per Page control.
+
+Fullscreen Grid and Compact views should automatically behave as:
+
+All sites
+
+Reason:
+Fullscreen is used for wall display and NOC overview. Operators expect to see all sites without manually changing pagination.
+
+Rules:
+
+hide Per Page in fullscreen Grid mode
+hide Per Page in fullscreen Compact mode
+automatically display all sites in fullscreen Grid/Compact
+avoid scroll-heavy layout where possible
+preserve Per Page behavior in normal non-fullscreen views if still useful
+==================================================
+9. Show Status Bar/Header In Fullscreen Monitored Sites
+
+In fullscreen Monitored Sites view, the monitoring status bar or header must still be visible.
+
+Operators need to see:
+
+monitoring running / paused
+current phase
+current server
+current sweep state
+next sweep countdown
+any important live state
+
+Fullscreen should not hide operational context.
+
+Add a compact fullscreen-friendly status/header area.
+
+It should be visually clean and not take too much space.
+
+==================================================
+10. Compact Grid Card Redesign
+
+The current Compact Grid cards are not visually useful enough.
+
+Redesign Compact mode to be ultra-minimal and color-first.
+
+In Compact mode:
+
+each site should be represented as a compact square/tile
+only show the site name inside the square
+do not show domain
+do not show response time
+do not show extra metrics
+do not show buttons
+do not show large padding
+do not show unnecessary text
+
+The tile background color must represent the site status:
+
+UP = green
+SLOW = yellow/orange
+DEGRADED = amber
+UNSTABLE = purple/blue
+DOWN = red/dark red
+
+Goal:
+
+maximum density
+fast visual scanning
+suitable for fullscreen wall display
+readable site name
+instantly recognizable status by color
+
+Normal Grid mode can still show more details. Compact mode should be minimal.
+
+==================================================
+11. SSL Data Usage Across The App
+
+Audit all places where SSL data is currently used.
+
+For example:
+
+Dashboard overview
+Site detail page
+Monitoring cards
+Status summaries
+SSL status widgets
+
+Make sure they do not run SSL checks independently.
+
+They should read from the SSL Certificates module data.
+
+If SSL data for a site does not exist yet, show:
+
+Not tracked
+Add to SSL Certificates
+Last SSL data unavailable
+
+Do not silently run SSL checks from those views.
+
+==================================================
+12. Concurrency And Locking Requirements
+
+Implement a clean concurrency model.
+
+The system must prevent heavy background jobs from overlapping in a harmful way.
+
+Rules:
+
+main monitoring sweep and Run SSL Check On All Sites must not run at the same time
+automatic SSL scan waits for monitoring idle/cooldown
+main monitoring waits while SSL batch scan is running
+manual single-site checks have high priority and can run immediately
+single SSL check can run manually without blocking the whole system
+prevent duplicate SSL batch scans
+prevent duplicate full sweeps
+show clear UI feedback when an action cannot start because another heavy job is running
+
+Examples:
+
+"SSL scan is waiting for monitoring cooldown"
+"Monitoring will resume after SSL scan finishes"
+"Full SSL scan already running"
+"Manual check started"
+==================================================
+13. UI Feedback Requirements
+
+Operators must always understand what is happening.
+
+Add clear status labels where needed:
+
+For SSL Certificates:
+
+SSL scan running
+SSL scan waiting for monitoring cooldown
+SSL scan completed
+Next SSL scan in X hours
+Last SSL scan X minutes ago
+
+For monitoring:
+
+monitoring running
+monitoring paused
+waiting for SSL scan to finish
+current sweep phase
+manual check running
+
+Do not make the UI feel frozen.
+
+==================================================
+14. Backend Requirements
+
+Backend should support:
+
+SSL certificates data model if not already clean
+SSL-only domains
+SSL scan status
+SSL scan schedule
+manual SSL check single entry
+manual SSL check all entries
+locking between SSL batch scan and monitoring sweep
+high-priority manual check execution
+APIs for SSL summary card
+APIs for SSL Certificates list
+APIs for bulk import SSL sites
+APIs for adding SSL-only domain
+APIs for last/next SSL scan metadata
+
+Preserve existing APIs where possible, but improve them if the current structure is unreliable.
+
+==================================================
+15. Frontend Requirements
+
+Frontend should support:
+
+improved SSL Certificates page
+Run SSL Check On All Sites button
+Bulk Import SSL Sites button
+Add SSL-only Domain
+SSL summary cards
+SSL table/list
+SSL scan progress state
+dashboard SSL card as shortcut, not popup
+fullscreen monitored sites control fixes
+Compact button available next to Grid/List
+fullscreen status/header visibility
+compact color-only tiles
+
+Maintain:
+
+dark NOC style
+Persian/RTL support
+responsive layout
+operator-focused UX
+existing dashboard visual identity
+==================================================
+16. General Engineering Guidance
+
+Please inspect the existing codebase and make the cleanest implementation.
+
+If current code is duplicated or fragile, refactor it.
+
+If there is a better architecture based on existing files, use it.
+
+Do not rewrite the entire project unnecessarily.
+
+Do not create fake/mock states.
+
+All scan states, status cards, buttons, and progress indicators should reflect real backend state.
+
+The final implementation should be stable, predictable, and suitable for real NOC/server operators.

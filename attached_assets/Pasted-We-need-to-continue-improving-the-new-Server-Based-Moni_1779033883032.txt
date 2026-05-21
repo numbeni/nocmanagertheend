@@ -1,0 +1,281 @@
+We need to continue improving the new Server-Based Monitoring architecture and Grid-First NOC Dashboard.
+
+You already have access to the full codebase and previous architectural changes. Please continue evolving the system professionally and intelligently.
+
+Do not treat the following items as isolated UI patches only. Think about the whole platform architecture, operator workflow, monitoring engine behavior, shared state management, realtime synchronization, and overall NOC usability.
+
+You are free to refactor, reorganize, optimize, or redesign internal implementations wherever necessary if it leads to a cleaner, more maintainable, more reliable, and more production-grade system.
+
+The final result should preserve the core identity of the project while improving consistency, operator experience, realtime visibility, and reliability under real-world Iranian hosting/network conditions.
+
+==================================================
+
+1. SSL Overview Card In Dashboard
+   ==================================================
+
+Add a dedicated SSL Overview card inside Dashboard Overview.
+
+This card should:
+
+* act as a direct shortcut to the SSL Certificates section/page
+* NOT open any popup/modal
+* display:
+
+  * total SSL entries
+  * invalid SSL count
+  * expiring SSL count
+  * error SSL count
+  * last SSL scan status/time
+* use SSL module data only
+* never calculate SSL data from monitoring sweeps
+
+This card should visually match the rest of the overview cards and feel like a first-class monitoring metric.
+
+==================================================
+2. Fix Unassigned Sites Server Assignment
+=========================================
+
+Currently, old/unassigned sites cannot properly be assigned to servers from the Servers section.
+
+The UI throws:
+
+"Fail to assign the sites"
+
+This is a major workflow issue.
+
+Fix the entire assignment flow properly.
+
+Operators must be able to:
+
+* assign old sites to servers
+* assign migrated sites
+* assign previously unassigned sites
+* bulk assign multiple sites to a server
+* reassign sites between servers safely
+
+The workflow should feel reliable and operator-friendly.
+
+If current APIs or backend logic are fragile, refactor them properly.
+
+Do not apply hacky fixes.
+
+==================================================
+3. Show Failure Reason In Grid And List Views
+=============================================
+
+In Grid View and List View, show the failure reason for all non-UP states.
+
+Examples:
+
+* DNS timeout
+* SSL expired
+* TCP failed
+* HTTP 500
+* curl timeout
+* connection refused
+* upstream unavailable
+* invalid response
+* degraded latency
+
+Operators need immediate visibility into WHY a site is problematic.
+
+These reasons should always reflect the latest real monitoring result.
+
+Do not show stale reasons from old checks.
+
+Keep the UI compact and readable.
+
+==================================================
+4. Restore Multi-Select And Bulk Actions In List View
+=====================================================
+
+Restore proper List View bulk selection features.
+
+Operators must be able to:
+
+* select multiple sites
+* bulk delete
+* bulk pause
+* bulk assign server
+* bulk run checks
+* bulk move if useful later
+
+The UX should feel fast and production-grade.
+
+Selection state must remain stable during realtime updates.
+
+==================================================
+5. Restore Right Click Context Menu
+===================================
+
+Restore the old Right Click Context Menu system and all previously useful operator actions.
+
+These features were very important for NOC workflows.
+
+The context menu should support actions like:
+
+* run check
+* pause site
+* resume site
+* delete site
+* copy domain
+* open details
+* assign server
+* diagnostics
+* open logs
+* open SSL info
+* open DNS tools
+* open console if applicable
+
+You are free to redesign the context menu architecture if needed, but preserve and improve the operator UX.
+
+The final system should feel fast and professional.
+
+==================================================
+6. Restore Pause Site Feature
+=============================
+
+Bring back the Pause Site feature properly.
+
+Operators must be able to temporarily remove a site from automatic monitoring without deleting it.
+
+Paused sites should:
+
+* not participate in automatic sweeps
+* not enter Critical/Down Banner
+* not trigger retries
+* still remain visible in UI
+* clearly show paused state
+* still allow manual checks
+
+Pause state must remain synchronized across:
+
+* Grid View
+* Compact View
+* List View
+* Server metrics
+* Dashboard counts
+
+Realtime updates must remain consistent.
+
+==================================================
+7. Improve Critical / Down Banner Logic
+=======================================
+
+Finalize the new Down/Critical Banner behavior.
+
+Current intended architecture:
+
+* first server pass
+* second pass for down sites inside same server
+* final global down recheck
+
+Behavior rules:
+
+If a site becomes DOWN after first+second confirmation:
+
+* move it to Critical Banner
+* remove it from server accordion section
+* avoid duplicate rendering
+
+If during Final Down Recheck the site recovers:
+
+* immediately remove it from Critical Banner
+* move it back into its original server section
+* update server metrics live
+* synchronize all views
+
+If still DOWN:
+
+* keep it inside Critical Banner only
+
+Important:
+A DOWN site should only exist in ONE visual location at a time.
+
+No duplicate rendering between:
+
+* Critical Banner
+* Grid
+* Compact
+* List
+* Server accordion
+
+All views must consume one shared normalized monitoring state.
+
+==================================================
+8. Shared State And View Consistency
+====================================
+
+Grid View is still the main/default operator experience.
+
+Compact View and List View must behave as alternate representations of the exact same monitoring state.
+
+Do NOT create separate logic for:
+
+* statuses
+* filtering
+* down sites
+* paused sites
+* critical rendering
+* monitoring progress
+* server grouping
+
+Everything should come from a shared normalized monitoring model/state layer.
+
+This is extremely important for consistency and operator trust.
+
+==================================================
+9. Realtime Operator Experience
+===============================
+
+The platform should continue evolving into a realtime operator-first NOC system.
+
+Focus on:
+
+* responsiveness
+* realtime feedback
+* fast manual actions
+* predictable monitoring flow
+* visibility into current system activity
+* clean synchronization between frontend and backend
+
+Operators should instantly understand:
+
+* what the monitoring engine is doing
+* which server is currently being checked
+* which sites are problematic
+* why they are problematic
+* whether a site is paused
+* whether manual checks are running
+* when a site recovered
+* whether monitoring is paused
+
+==================================================
+10. Architecture Freedom
+========================
+
+You are allowed to:
+
+* refactor components
+* redesign shared state architecture
+* improve APIs
+* normalize backend responses
+* redesign monitoring state handling
+* improve concurrency handling
+* improve realtime synchronization
+* optimize rendering performance
+* optimize high-density grid rendering
+* improve SSE/WebSocket architecture
+* improve data flow consistency
+
+As long as:
+
+* the core project identity remains intact
+* the operator workflow improves
+* the monitoring engine becomes more deterministic and trustworthy
+* the UX becomes more professional
+* the system remains suitable for Iranian hosting/network conditions
+
+Avoid temporary fixes or UI-only hacks.
+
+Implement this as a clean, scalable, production-grade monitoring platform architecture.

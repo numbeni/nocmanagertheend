@@ -1,0 +1,341 @@
+این پرامپت انگلیسی آماده برای Replit:
+
+We need to continue polishing and improving the current NOC monitoring platform based on the new server-based monitoring engine and dashboard architecture.
+
+You have access to the full codebase. Please inspect the existing implementation carefully and make these improvements in a clean, production-grade way. Do not treat these as isolated CSS patches only. If you find a better architectural or UI approach based on the current project structure, you are free to refactor and improve it, as long as the core product identity and operator workflow remain intact.
+
+The platform is a real NOC dashboard for hosting/server operators, so visual consistency, realtime clarity, stable layout, readable charts, and accurate status representation are very important.
+
+==================================================
+FRONTEND CHANGES
+================
+
+1. Critical / Down Site Card Text Colors
+
+In the Critical / Down Sites cards, update text colors:
+
+* The text like:
+  “X consecutive failures”
+  or
+  “fail number X”
+  should be red, bold, and attention-grabbing, but not an eye-burning bright red.
+  Use a professional dark-theme friendly red.
+
+* The domain text color in these cards should match the server-section muted text color:
+  hsl(215 16% 47%)
+
+* The actual failure reason / down reason should keep its current warning-like color:
+  oklch(75% 0.183 55.934)
+
+Goal:
+Operators should immediately notice repeated failures, but the card should still look professional and readable.
+
+==================================================
+2. Make Card Widths Consistent Across Dashboard
+===============================================
+
+There is a major frontend issue where card widths become inconsistent in different states.
+
+Examples:
+
+* In server sections, when one site becomes unstable and an extra line appears, card widths become misaligned.
+* In Critical / Down Sites, when a new card is added before its “X consecutive failures” line appears, the card width differs from others.
+* In general, dashboard cards should remain visually aligned and equal-width.
+
+Fix this globally.
+
+Requirements:
+
+* Site cards should keep consistent widths regardless of status.
+* Cards should reserve space for status metadata lines even if the value is not available yet.
+* Layout should not jump when new data arrives.
+* Critical cards, server grid cards, up/slow/unstable/down cards should all remain aligned.
+* Avoid layout shift during sweeps and realtime updates.
+
+For UP cards, add a third informational line similar to slow/unstable/down cards, so all cards remain visually consistent.
+
+Suggestion:
+For UP cards, show something like:
+
+* “No recent failures”
+* or “Clean for X checks”
+* or “X consecutive healthy checks”
+
+Use a subtle color between white and green to indicate positive stability.
+
+This helps operators understand which sites/servers are consistently healthy.
+
+==================================================
+3. Improve Server Accordion Animation
+=====================================
+
+The open/close animation of server accordion rows currently feels sudden and not smooth.
+
+Improve the accordion expand/collapse animation.
+
+Requirements:
+
+* smooth height transition
+* no abrupt jumps
+* no layout flicker
+* keep collapsed rows tightly stacked
+* expanded body should remain dark and should not inherit the server header color
+* animation should feel professional and fast enough for NOC usage
+
+==================================================
+4. Light Mode Contrast Fixes
+============================
+
+In Light Mode, some dashboard elements do not have good contrast.
+
+Fix contrast and readability for:
+
+* SSL status card / SSL status bar
+* Sweep status bar
+* status labels
+* badges
+* any card where text and background are too similar
+
+Requirements:
+
+* Text must remain readable in both dark mode and light mode.
+* SSL Status text must contrast properly against its background.
+* Sweep Status text must contrast properly against its background.
+* Maintain the existing design language.
+
+==================================================
+5. Sidebar Order Change
+=======================
+
+Move the DNS Performance section in the sidebar so that it appears above SSL Certificates.
+
+New sidebar order should place:
+
+DNS Performance
+above
+SSL Certificates
+
+Keep routes and existing functionality intact.
+
+==================================================
+6. Payment Gateway Chart Colors
+===============================
+
+In Payment Gateway Monitor → Status Distribution chart:
+
+Currently, UP and DEGRADED columns appear black, which is wrong.
+
+Fix colors:
+
+* UP = green
+* DEGRADED = orange / amber
+* DOWN = red
+* UNKNOWN or neutral = muted gray
+
+Make sure chart colors work in both dark and light themes.
+
+==================================================
+7. Chart Tooltip / Text Contrast Issues
+=======================================
+
+Many charts in dark mode show black tooltip text or unreadable text when hovering.
+
+Known examples:
+
+* Charts and Status → Status Distribution
+* Payment Gateway Monitor charts
+* Site detail page charts
+* Status History chart
+
+Fix all chart tooltip and label contrast issues globally.
+
+Requirements:
+
+* Tooltips must be readable in dark mode.
+* Tooltip background and text colors should match the active theme.
+* Axis labels, legend text, and status labels must be readable.
+* Avoid black-on-dark combinations.
+* Use a shared chart theme/helper if possible.
+
+==================================================
+8. Site Detail Status History Colors
+====================================
+
+On each site detail page, in Site Charts / Status History:
+
+The colors for different statuses are not clear enough.
+
+Improve status colors:
+
+* UP = green
+* SLOW = yellow/orange
+* DEGRADED = amber
+* UNSTABLE = purple/blue
+* DOWN = red
+* PAUSED = gray / muted
+* CURRENTLY_FINE = special green variant
+
+Make the status history chart easier to read.
+
+==================================================
+9. Replace SSL Warning Trend Chart
+==================================
+
+In Site and Status / Charts and Status section:
+
+Remove:
+
+* SSL Warning Trend
+
+Replace it with:
+
+* SSL Certificate Status
+
+This should use data from the SSL Certificates module, not from the main monitoring sweep.
+
+Also review the entire Charts and Status section.
+
+If there are unnecessary charts, confusing widgets, or missing useful charts based on the current architecture, improve them.
+
+Requirements:
+
+* layout must be clean
+* spacing must be consistent
+* CSS must be correct
+* charts must be readable
+* responsive behavior must be good
+* dark/light mode must both work
+
+==================================================
+BACKEND / DATA / PRODUCT CHANGES
+================================
+
+10. Add Currently Fine And Paused Cards To Monitored Sites Summary
+    ==================================================
+
+At the top of the Monitored Sites dashboard, where summary cards are shown, add two new cards:
+
+* Currently Fine
+* Paused
+
+These states should not be counted under UP / SLOW / DOWN / etc.
+
+They must be treated as separate operational states.
+
+Requirements:
+
+* Currently Fine count should show sites manually marked as currently fine.
+* Paused count should show paused sites.
+* Server metrics and dashboard summaries should not incorrectly include these sites in normal active status buckets.
+* Grid/List/Compact views should all use the same normalized status logic.
+
+==================================================
+11. Nextcloud Talk Timezone
+===========================
+
+All Nextcloud Talk alerts must use Iran date/time.
+
+Requirements:
+
+* Use Asia/Tehran timezone.
+* Include human-readable Persian/Iranian local time where appropriate.
+* Alerts should not use UTC unless explicitly needed.
+* This applies to:
+
+  * SSL alerts
+  * Payment Gateway alerts
+  * Critical/down alerts if applicable
+  * monitoring reports if sent later
+
+==================================================
+12. Generate Report Button In Monitored Sites Dashboard
+=======================================================
+
+In the Monitored Sites dashboard, next to the Add Site button, add:
+
+Generate Report
+
+This should open a modal/popup where the user can generate a comprehensive report about the current monitoring state.
+
+Report modal requirements:
+
+* user can choose language:
+
+  * English
+  * Persian
+* user can choose report time range
+* report should be comprehensive and useful for operators/managers
+
+The generated report should include, where available:
+
+* overall monitored sites summary
+* server-based status summary
+* critical/down sites
+* paused sites
+* currently fine sites
+* unstable sites
+* slow/degraded sites
+* recent recoveries
+* repeated failures
+* sweep status and last sweep duration
+* SSL certificate summary
+* payment gateway summary
+* DNS performance summary
+* notable incidents / warnings
+* operator-friendly explanation
+
+Report output should be easy to copy/export.
+
+If the current project already has a report system, integrate with it. If not, implement a clean modal-based report generator.
+
+==================================================
+13. Preserve Grid-First Architecture
+====================================
+
+Grid View remains the main/default product experience.
+
+All improvements must preserve consistency across:
+
+* Grid View
+* Compact View
+* List View
+* Critical Banner
+* Server Accordion
+* Site Detail pages
+* Dashboard Overview
+
+Do not create separate status logic for each view.
+
+Use one shared normalized status model.
+
+==================================================
+14. General Quality Requirements
+================================
+
+Please improve the implementation wherever needed.
+
+You are free to:
+
+* refactor components
+* create shared chart theme utilities
+* normalize status color mappings
+* improve card layout components
+* improve theme variables
+* improve report generation architecture
+* improve realtime state handling
+* improve CSS consistency
+* improve responsive behavior
+
+Avoid quick hacks.
+
+The final result should feel:
+
+* professional
+* stable
+* NOC-friendly
+* visually consistent
+* readable in dark and light mode
+* optimized for realtime monitoring
+* suitable for operators working under pressure
+
+Do not rewrite the entire project from scratch. Improve and refactor intelligently within the existing architecture.

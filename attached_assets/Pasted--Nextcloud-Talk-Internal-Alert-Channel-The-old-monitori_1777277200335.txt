@@ -1,0 +1,254 @@
+## Nextcloud Talk / Internal Alert Channel
+
+The old monitoring scripts used variables named `TOKEN` and `CHAT_IDS` to send messages to an internal chat system.
+
+In the old project:
+
+* `.env`
+
+  * `TOKEN=...`
+  * `CHAT_IDS=7185882632,133526135`
+
+* `dig_bot.py`
+
+  * reads:
+
+    ```py
+    TOKEN = os.getenv("TOKEN")
+    CHAT_IDS = os.getenv("CHAT_IDS", "").split(",")
+    ```
+  * sends messages to:
+
+    ```text
+    https://api.telegram.org/bot{TOKEN}/sendMessage
+    ```
+  * loops through all chat IDs and sends the message to each one
+
+* `unixcheck.py`
+
+  * first tries:
+
+    ```py
+    TELEGRAM_TOKEN_PRODUCTS
+    CHAT_ID_PRODUCTS
+    ```
+  * then falls back to:
+
+    ```py
+    TOKEN
+    CHAT_IDS
+    ```
+
+In the new Hosting Manager Suite, I want the same alerting idea, but treat this as the company’s internal important-alert channel, connected to the company’s Nextcloud Talk / internal bot setup.
+
+## Goal
+
+Add a separate alert channel for important company-level alerts.
+
+This should be used for important and serious alerts only, so the company owner/manager or responsible operator is not spammed.
+
+This channel should be separate from normal logs and normal dashboard activity.
+
+## Environment variables
+
+Support these environment variables:
+
+```env
+NEXTCLOUD_TALK_TOKEN=
+NEXTCLOUD_TALK_CHAT_IDS=
+```
+
+Also support legacy fallback names from the old scripts:
+
+```env
+TOKEN=
+CHAT_IDS=
+```
+
+Priority:
+
+```text
+NEXTCLOUD_TALK_TOKEN first, fallback to TOKEN
+NEXTCLOUD_TALK_CHAT_IDS first, fallback to CHAT_IDS
+```
+
+`NEXTCLOUD_TALK_CHAT_IDS` / `CHAT_IDS` may contain multiple comma-separated chat IDs:
+
+```env
+NEXTCLOUD_TALK_CHAT_IDS=7185882632,133526135
+```
+
+The system should send the same alert to all configured chat IDs.
+
+## Send URL
+
+For compatibility with the old bot behavior, use the same sendMessage-style API if the service supports it:
+
+```text
+https://api.telegram.org/bot{TOKEN}/sendMessage
+```
+
+However, name the internal service/module generically, for example:
+
+```text
+important-alerts.ts
+nextcloud-talk-alerts.ts
+```
+
+Do not hardcode the token or chat IDs.
+
+## What should be sent to this channel
+
+Send only serious / important alerts, such as:
+
+* site truly down
+* DNS failure
+* TCP unreachable
+* repeated HTTP 5xx
+* SSL expires very soon, for example 3 days or less
+* new critical incident
+* incident resolved after being critical
+* many sites failing at once
+* bulk check detects a possible infrastructure-wide problem
+
+Do NOT send:
+
+* every regular check
+* every slow warning
+* normal logs
+* debug logs
+* product check minor warnings
+* repeated duplicate alerts every minute
+
+## Deduplication and cooldown
+
+Add cooldown / deduplication so the same alert does not get sent repeatedly.
+
+Use an alert fingerprint such as:
+
+```ts
+siteId + alertType + rootCause + severity
+```
+
+Recommended cooldown:
+
+```text
+30 minutes per alert fingerprint
+```
+
+Allow immediate sending again if:
+
+* severity increases
+* site status changes from warning/degraded to down
+* incident resolves
+* root cause changes
+
+## Message format
+
+Messages should be concise and bilingual: Persian + English.
+
+Example:
+
+```text
+🚨 Critical Hosting Alert
+
+Site: example.com
+Status: DOWN
+Cause: DNS failure
+Time: 2026-04-27 14:32
+Action: Check DNS records and nameservers.
+
+————
+
+🚨 هشدار مهم هاستینگ
+
+سایت: example.com
+وضعیت: قطع
+علت: مشکل DNS
+زمان: 2026-04-27 14:32
+اقدام پیشنهادی: رکوردهای DNS و نیم‌سرورها بررسی شوند.
+```
+
+## Implementation requirements
+
+Add a reusable backend service, for example:
+
+```text
+artifacts/api-server/src/services/important-alerts.ts
+```
+
+or:
+
+```text
+artifacts/api-server/src/services/nextcloud-talk-alerts.ts
+```
+
+The service should:
+
+* read env variables
+* support multiple chat IDs
+* send messages safely
+* split long messages if needed
+* log failures without crashing monitoring
+* return success/failure info
+* support test sending
+
+## API endpoint
+
+Add an admin/test endpoint:
+
+```text
+POST /api/admin/test-important-alert
+```
+
+or similar.
+
+It should send a test message to all configured important-alert chat IDs.
+
+Also expose config status safely:
+
+```text
+GET /api/admin/important-alert-status
+```
+
+Return only:
+
+```json
+{
+  "configured": true,
+  "hasToken": true,
+  "chatCount": 2
+}
+```
+
+Never expose the actual token.
+
+## UI
+
+Add a simple status indicator in the admin/settings area if such page exists:
+
+```text
+Important Alert Channel: Configured / Not configured
+```
+
+Add a button:
+
+```text
+Send Test Important Alert
+```
+
+## Relationship with Telegram
+
+If the current project already has Telegram alerting, keep it if useful, but add this important-alert channel as a separate high-priority alert destination.
+
+This channel is for serious alerts only.
+
+Normal Telegram alerts may still exist for operators, but Nextcloud/internal important alerts should be stricter and less noisy.
+
+## Safety
+
+* Never hardcode secrets.
+* Never expose tokens in frontend.
+* Do not crash the monitoring loop if sending fails.
+* Avoid spam.
+* Log send failures internally.

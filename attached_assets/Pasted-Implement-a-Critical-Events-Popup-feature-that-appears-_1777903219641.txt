@@ -1,0 +1,66 @@
+Implement a "Critical Events Popup" feature that appears immediately after user login.
+
+Requirements:
+
+1. Visibility Rules
+- The popup must be shown ONLY to users with roles:
+  - Admin
+  - Operator
+  - Any role higher than Viewer
+- Users with the role "Viewer" must NOT see this popup.
+
+2. Trigger Behavior
+- The popup should automatically appear right after a successful login.
+- It should not require manual action to open.
+- It should appear only once per login session.
+
+3. Data Scope
+- The popup must display critical or high-severity events that occurred within the LAST 1 HOUR.
+- If no critical events exist in that timeframe:
+  - Either do not show the popup at all
+  - OR show a minimal message like: "No critical events in the last hour"
+
+4. Event Criteria
+- Only include events marked as:
+  - Critical
+  - High severity
+  - System-impacting incidents
+- Ignore low or informational logs.
+
+5. Popup Content Structure
+Each event should include:
+- Event title / type
+- Severity level (Critical / High)
+- Timestamp
+- Related resource (e.g., site name)
+- Short description
+
+6. UI/UX Design
+- Display the popup as a modal (centered overlay).
+- Clean and professional dashboard-style design (similar to NOC dashboards).
+- Use visual indicators:
+  - Red for Critical
+  - Orange for High
+- Make the list scrollable if there are many events.
+- Include a clear close button.
+- Optional: Add a “View All Events” link.
+
+7. Performance Considerations
+- Fetch events efficiently (optimized query).
+- Limit results (e.g., last 10–20 events).
+- Avoid blocking the login process.
+
+8. Backend Logic
+- Create an endpoint like:
+  GET /events/critical?last=1h
+- Ensure proper filtering by severity and timestamp.
+
+9. Security & Access Control
+- Enforce role-based access control.
+- Only authorized roles should receive this data.
+
+10. Behavior Edge Cases
+- If the user refreshes the page, the popup should NOT reappear unless re-login occurs.
+- Handle empty states gracefully.
+
+Ensure the implementation is clean, maintainable, and integrates smoothly with the existing system.

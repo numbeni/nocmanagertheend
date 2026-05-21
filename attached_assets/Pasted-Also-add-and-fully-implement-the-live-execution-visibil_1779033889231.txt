@@ -1,0 +1,136 @@
+Also add and fully implement the live execution visibility system we discussed earlier.
+
+One of the most important goals of this new architecture is that operators must ALWAYS understand what the monitoring engine is doing right now in real time.
+
+The system should never feel “silent” or “frozen”.
+
+Whenever the monitoring engine is actively working inside any section, server, or phase, clearly show it directly in the UI beside that exact section using a live blinking indicator and realtime status label.
+
+This behavior is extremely important for operator trust and NOC usability.
+
+==================================================
+11. Live Active Execution Indicators
+====================================
+
+Add realtime “currently active” indicators across the entire monitoring UI.
+
+Whenever the monitoring engine is actively processing something, show:
+
+* blinking live dot / pulse animation
+* realtime text label
+* current phase description
+* current server/section context
+
+The operator must instantly understand where the engine is currently working.
+
+==================================================
+12. Server-Level Live Execution State
+=====================================
+
+When a server sweep starts:
+
+Show a live indicator directly beside that server header.
+
+Example:
+
+● Right now checking sites on this server
+First try on s1
+
+or:
+
+● Checking down sites on this server
+Second try on s1 down sites
+
+This indicator should:
+
+* blink/pulse smoothly
+* update live
+* disappear when the server phase completes
+* move automatically to the next server
+
+Only the currently active server should display the live execution state.
+
+Previously checked servers should become idle visually.
+
+==================================================
+13. Critical Banner Live State
+==============================
+
+When the final global down recheck phase starts:
+
+Show a live indicator inside the Critical / Down Banner.
+
+Example:
+
+● Last checking on down sites
+
+or:
+
+● Final verification of critical sites
+
+This should clearly indicate that the engine is now performing the final recovery verification pass.
+
+==================================================
+14. Global Monitoring Status Bar
+================================
+
+The global monitoring status bar/header should also reflect the live execution state.
+
+Examples:
+
+* Monitoring running — started 4 minutes ago
+* Currently checking: s2 iranserver
+* Current phase: First pass
+* Current site: example.com
+* Cooldown before next server: 2s
+* Final critical verification running
+* Monitoring paused
+* Waiting for SSL scan to finish
+
+This must update live using SSE/WebSocket/realtime synchronization.
+
+==================================================
+15. Live Execution Architecture
+===============================
+
+Implement this cleanly in both frontend and backend.
+
+Backend should expose:
+
+* current active server
+* current active phase
+* current active site if available
+* current sweep stage
+* cooldown state
+* final verification state
+* paused state
+* manual check state
+
+Frontend should consume this shared live execution state everywhere consistently.
+
+Do not create fragmented local UI-only states.
+
+==================================================
+16. UX Goals
+============
+
+The system should feel:
+
+* alive
+* realtime
+* deterministic
+* operator-focused
+* trustworthy
+* transparent
+
+An operator watching the dashboard should always understand:
+
+* what is running
+* where it is running
+* what phase is active
+* whether the engine is waiting
+* whether the engine is retrying
+* whether the engine is verifying critical sites
+* whether monitoring is paused
+
+This visibility is a core part of the new NOC architecture and should be treated as a first-class feature, not just a cosmetic animation.

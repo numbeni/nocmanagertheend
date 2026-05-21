@@ -1,0 +1,212 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import os
+import subprocess
+import requests
+from dotenv import load_dotenv
+from datetime import datetime
+import re
+import time
+
+# -----------------------------
+# Load ENV
+# -----------------------------
+ENV_FILE = "/home/.env"
+load_dotenv(dotenv_path=ENV_FILE)
+
+TOKEN = os.getenv("TOKEN")
+CHAT_IDS = os.getenv("CHAT_IDS", "").split(",")
+
+TELEGRAM_URL = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+
+# -----------------------------
+# Nextcloud Talk Config
+# -----------------------------
+NEXTCLOUD_URL = "https://next.vibrence.shop"
+NEXTCLOUD_USER = "checkcurl"
+NEXTCLOUD_PASS = "Mmehdi197865"   # پیشنهاد: بعداً ببری تو .env
+NEXTCLOUD_ROOM = "asov3xe3"
+
+NEXTCLOUD_API = f"{NEXTCLOUD_URL}/ocs/v2.php/apps/spreed/api/v1/chat/{NEXTCLOUD_ROOM}"
+
+# -----------------------------
+# File paths
+# -----------------------------
+SITES_FILE = "/home/sites.txt"
+LOG_FILE = "/home/dig_bot.log"
+MAX_MSG_LEN = 3500
+
+# -----------------------------
+# DNS Servers (Failover Support)
+# -----------------------------
+DNS_SERVERS = [
+    "8.8.8.8",
+    "1.1.1.1",
+    "8.8.4.4"
+]
+
+# -----------------------------
+# Write log
+# -----------------------------
+def write_log(text):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(LOG_FILE, "a") as f:
+        f.write(f"[{timestamp}] {text}\n")
+
+# -----------------------------
+# Send Telegram Message
+# -----------------------------
+def send_msg(text):
+    chunks = [text[i:i+MAX_MSG_LEN] for i in range(0, len(text), MAX_MSG_LEN)]
+    for chunk in chunks:
+        for chat_id in CHAT_IDS:
+            chat_id = chat_id.strip()
+            if chat_id:
+                try:
+                    r = requests.post(
+                        TELEGRAM_URL,
+                        data={"chat_id": chat_id, "text": chunk, "parse_mode": "Markdown"}
+                    )
+                    write_log(f"[SEND] to Telegram {chat_id}: {r.status_code}, {r.text}")
+                except Exception as e:
+                    write_log(f"[ERROR] sending to Telegram {chat_id}: {e}")
+
+# -----------------------------
+# Send Nextcloud Talk Message
+# -----------------------------
+def send_nextcloud_msg(text):
+    headers = {
+        "OCS-APIRequest": "true",
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    }
+
+    payload = {
+        "message": text
+    }
+
+    try:
+        r = requests.post(
+            NEXTCLOUD_API,
+            auth=(NEXTCLOUD_USER, NEXTCLOUD_PASS),
+            headers=headers,
+            json=payload,
+            timeout=30
+        )
+        write_log(f"[SEND] to Nextcloud Talk: {r.status_code}, {r.text}")
+    except Exception as e:
+        write_log(f"[ERROR] sending to Nextcloud Talk: {e}")
+
+# -----------------------------
+# dig with Retry + DNS Failover
+# -----------------------------
+def try_dig(domain, retries=3, wait=2, timeout=30):
+
+    for dns in DNS_SERVERS:            # failover DNS list
+        for attempt in range(retries):
+            try:
+                result = subprocess.check_output(
+                    ["dig", f"@{dns}", domain],
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    timeout=timeout
+                )
+                return result     # success → return output
+
+            except Exception as e:
+                if attempt < retries - 1:
+                    time.sleep(wait)
+                else:
+                    write_log(f"[ERROR] dig fail on DNS {dns} for {domain}: {e}")
+
+    raise Exception("All DNS servers failed for " + domain)
+
+# -----------------------------
+# Extract A records following CNAME chain
+# -----------------------------
+def get_a_records(domain):
+    visited = set()
+    current = domain
+    ips = []
+
+    while True:
+        if current in visited:
+            break
+        visited.add(current)
+
+        try:
+            result = try_dig(current)
+        except Exception as e:
+            write_log(f";; DIG ERROR {current}: {e}")
+            return [], f"Error dig {current}: {e}"
+
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        write_log(f"\n;; Dig output for {current} at {timestamp}\n{result.strip()}\n")
+
+        # check CNAME
+        cname_match = re.search(rf"{re.escape(current)}\.\s+\d+\s+IN\s+CNAME\s+([^\s]+)", result)
+        if cname_match:
+            current = cname_match.group(1).rstrip(".")
+            continue
+
+        # extract A records
+        new_ips = re.findall(
+            rf"{re.escape(current)}\.\s+\d+\s+IN\s+A\s+([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)",
+            result
+        )
+        if new_ips:
+            ips.extend(new_ips)
+            break
+        else:
+            break
+
+    return ips, None
+
+# -----------------------------
+# Run dig for a domain
+# -----------------------------
+def run_dig(domain):
+    ips, error = get_a_records(domain)
+    domain_code = f"`{domain}`"
+    arrow = "➡️"
+
+    if error:
+        return f"🌐 {domain_code} {arrow} ❌ {error}"
+
+    if not ips:
+        return f"🌐 {domain_code} {arrow} ❌ No A record found"
+
+    return f"🌐 {domain_code} {arrow} {', '.join(ips)}"
+
+# -----------------------------
+# Main
+# -----------------------------
+def main():
+    if not os.path.exists(SITES_FILE):
+        print("فایل sites.txt پیدا نشد")
+        write_log("[ERROR] sites.txt not found")
+        return
+
+    with open(SITES_FILE, "r") as f:
+        sites = [s.strip() for s in f if s.strip()]
+
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    report = f"🛰️ DIG Report ({timestamp})\nDNS Servers → {', '.join(DNS_SERVERS)}\n----------------------\n"
+
+    for domain in sites:
+        result = run_dig(domain)
+        report += result + "\n"
+        write_log(result)
+
+    # Send to Telegram
+    send_msg(report)
+    write_log("[INFO] Report sent to Telegram")
+
+    # Send to Nextcloud Talk
+    send_nextcloud_msg(report)
+    write_log("[INFO] Report sent to Nextcloud Talk")
+
+# -----------------------------
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,199 @@
+We need to update the Network Connectivity module target configuration.
+
+Currently, the connectivity targets are hardcoded inside:
+
+artifacts/api-server/src/services/connectivity.ts
+
+The current hardcoded list is something like:
+
+const HARDCODED_TARGETS = [
+  { id: 1, name: "Google",   host: "google.com" },
+  { id: 2, name: "Soft98",   host: "soft98.ir" },
+  { id: 3, name: "Varzesh3", host: "www.varzesh3.com" },
+];
+
+We want to keep these three as the default fallback targets, but we also want the operator/developer to be able to override them from environment variables at runtime, exactly like the existing Nextcloud Talk configuration is handled.
+
+Important:
+Do NOT add this to the Settings UI.
+Do NOT make this configurable from the frontend.
+This should be a server-side runtime configuration, similar to NEXTCLOUD_TALK_URL, NEXTCLOUD_TALK_USER, NEXTCLOUD_TALK_PASSWORD, NEXTCLOUD_TALK_ROOM / NEXTCLOUD_TALK_ROOMS.
+
+==================================================
+NEW ENVIRONMENT VARIABLE
+==================================================
+
+Add a new environment variable:
+
+CONNECTIVITY_TARGETS
+
+Format:
+
+Name:host,Name:host,Name:host
+
+Example:
+
+CONNECTIVITY_TARGETS=Google:google.com,Soft98:soft98.ir,Varzesh3:www.varzesh3.com
+
+Another example:
+
+CONNECTIVITY_TARGETS=Soft98:soft98.ir,Varzesh3:www.varzesh3.com,Google:google.com
+
+Rules:
+
+1. If CONNECTIVITY_TARGETS is not set or is empty:
+   - use the current default fallback targets:
+     - Google: google.com
+     - Soft98: soft98.ir
+     - Varzesh3: www.varzesh3.com
+
+2. Entries are separated by comma.
+
+3. Each entry uses this format:
+   Name:host
+
+4. Trim extra whitespace around name and host.
+
+5. Ignore invalid entries:
+   - empty entries
+   - entries without ":"
+   - entries with empty name
+   - entries with empty host
+
+6. IDs must be generated automatically starting from 1.
+
+7. If CONNECTIVITY_TARGETS is set but all entries are invalid:
+   - fall back to the default targets.
+
+8. The backend ping/check logic must use the parsed hostname only.
+
+9. If someone accidentally provides a full URL, normalize it to hostname:
+   - https://soft98.ir/ → soft98.ir
+   - https://www.varzesh3.com/ → www.varzesh3.com
+   - http://example.com/path → example.com
+
+10. The displayed name should come from the Name part of the env entry.
+
+==================================================
+EXPECTED IMPLEMENTATION
+==================================================
+
+In artifacts/api-server/src/services/connectivity.ts:
+
+Create a helper function such as:
+
+parseConnectivityTargetsFromEnv()
+
+or:
+
+loadConnectivityTargets()
+
+This function should:
+
+- read process.env.CONNECTIVITY_TARGETS
+- parse the value
+- normalize hosts
+- validate entries
+- assign ids
+- return the target list
+- fall back to defaults if needed
+
+Suggested internal shape:
+
+type ConnectivityTargetConfig = {
+  id: number;
+  name: string;
+  host: string;
+};
+
+Default fallback:
+
+const DEFAULT_CONNECTIVITY_TARGETS = [
+  { name: "Google", host: "google.com" },
+  { name: "Soft98", host: "soft98.ir" },
+  { name: "Varzesh3", host: "www.varzesh3.com" },
+];
+
+Then convert to ids:
+
+[
+  { id: 1, name: "Google", host: "google.com" },
+  ...
+]
+
+==================================================
+IMPORTANT PRODUCT BEHAVIOR
+==================================================
+
+The default behavior must remain unchanged.
+
+If the user does nothing:
+- the system still uses:
+  - google.com
+  - soft98.ir
+  - www.varzesh3.com
+
+But if the operator wants to change the connectivity sentinel targets, they can do so at runtime by setting:
+
+CONNECTIVITY_TARGETS=Name:host,Name:host
+
+This should work in:
+
+- .env
+- Replit Secrets
+- Windows .bat runner
+- Linux shell environment
+- production deployment environment
+
+==================================================
+EXAMPLES
+==================================================
+
+Example .env:
+
+CONNECTIVITY_TARGETS=Google:google.com,Soft98:soft98.ir,Varzesh3:www.varzesh3.com
+
+Example Windows BAT:
+
+set CONNECTIVITY_TARGETS=Google:google.com,Soft98:soft98.ir,Varzesh3:www.varzesh3.com
+
+Example Linux / Git Bash:
+
+export CONNECTIVITY_TARGETS="Google:google.com,Soft98:soft98.ir,Varzesh3:www.varzesh3.com"
+
+==================================================
+DOCUMENTATION
+==================================================
+
+Update replit.md and/or the project environment variable documentation.
+
+Add a short explanation near the other environment variables:
+
+CONNECTIVITY_TARGETS
+Optional. Comma-separated list of connectivity sentinel targets in Name:host format.
+Used by the backend Network Connectivity module to determine if the monitoring application has usable network connectivity.
+Default:
+Google:google.com,Soft98:soft98.ir,Varzesh3:www.varzesh3.com
+
+Example:
+CONNECTIVITY_TARGETS=Google:google.com,Soft98:soft98.ir,Varzesh3:www.varzesh3.com
+
+==================================================
+DO NOT CHANGE SETTINGS UI
+==================================================
+
+Do not expose this list in the Settings page.
+
+The reason:
+These are infrastructure-level sentinel targets, like Nextcloud credentials/rooms.
+They should be configured at runtime through environment variables, not by normal dashboard users.
+
+The frontend Network Connectivity page can still display the active targets and their check results, but editing the target list should not happen from Settings or the frontend UI unless already explicitly required elsewhere.
+
+==================================================
+FINAL GOAL
+==================================================
+
+The Network Connectivity module should keep the current default targets, but allow advanced users/operators to override them safely through environment variables at runtime.
+
+This keeps the module simple, reliable, and production-friendly while avoiding unnecessary UI complexity.

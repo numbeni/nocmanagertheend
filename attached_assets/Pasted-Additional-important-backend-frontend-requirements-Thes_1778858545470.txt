@@ -1,0 +1,199 @@
+Additional important backend/frontend requirements.
+
+These requirements are separate from the new server-based monitoring redesign, but they are also important and must be implemented carefully.
+
+Focus on reliability, operator clarity, and correct monitoring behavior.
+
+==================================================
+1. Payment Gateway Status Must Be Based Only On curl -I
+==================================================
+
+In the Payment Gateway section, the ONLY source of truth for gateway status must be curl -I behavior.
+
+Do not use DNS status, SSL status, generic HTTP checks, or other extra checks to determine the main gateway status.
+
+Gateway status logic:
+
+- If curl -I returns a valid response/header/text output, the gateway is UP.
+- If curl -I does not return a valid response, times out, or fails, the gateway is DOWN.
+- If the gateway responds but SSL/TLS is missing, invalid, or not available, mark it as DEGRADED.
+
+The gateway UI should be simplified around curl -I only.
+
+Show:
+- curl -I result
+- status code if available
+- response headers preview
+- response time
+- final URL if redirected
+- error message if failed
+- last checked time
+
+Remove unnecessary gateway test noise from the UI.
+
+==================================================
+2. Scheduled curl Check For All Monitored Sites Every 12 Hours
+==================================================
+
+Add a scheduled background task that runs curl checks for all monitored websites every 12 hours.
+
+Purpose:
+- refresh curl availability state
+- keep curl diagnostics up to date
+- help operators see real availability behavior similar to Linux curl testing
+
+Rules:
+- run every 12 hours
+- update each site's curl status
+- update last curl result
+- update response time / error if available
+- avoid interfering with active main monitoring sweep if possible
+- if the main monitoring sweep is running, delay curl batch until a safe idle/cooldown moment
+
+==================================================
+3. Fix Stale curl Check Result Bug
+==================================================
+
+There is currently a bug in site/gateway curl check UI:
+
+When the operator opens curl check for one site, then switches to another site or gateway, the previous site's curl result is still displayed until the operator manually runs check again.
+
+This is wrong.
+
+Fix behavior:
+
+- curl result must always belong to the currently selected site/gateway
+- when selection changes, clear previous result immediately
+- show loading / not checked state for the new target
+- automatically fetch the latest stored curl result for the selected target
+- do not show stale results from another site
+- manual Run Curl Check should only update the currently selected target
+
+This is important for operator trust.
+
+==================================================
+4. Dedicated SSL Section In Sidebar
+==================================================
+
+Create a dedicated SSL section in the sidebar, similar to DNS and Payment sections.
+
+This SSL section is separate from normal site monitoring.
+
+Purpose:
+- centralized SSL health overview
+- certificate expiration tracking
+- invalid certificate tracking
+- SSL-only monitoring for selected sites
+- operator-friendly SSL status management
+
+The SSL section should include:
+- SSL Overview
+- Expiring Soon
+- Invalid Certificates
+- Healthy Certificates
+- SSL Errors
+- Last Checked
+- Next SSL Scan
+- certificate issuer
+- expiration date
+- days remaining
+- domain/hostname
+- linked monitored site if applicable
+
+==================================================
+5. SSL Scan Scheduling
+==================================================
+
+Run SSL checks for all SSL-tracked sites once every 24 hours.
+
+Important execution rule:
+
+SSL scan must run only when the main monitoring system is in cooldown/idle state and not executing any active monitoring test.
+
+When SSL scan starts:
+- pause or block the next automatic monitoring sweep until SSL scan is finished
+- run SSL checks gradually with spacing/delay between checks
+- avoid heavy parallel SSL checks
+- after SSL scan finishes, allow main monitoring to continue normally
+
+This prevents SSL checks from interfering with the main server-based monitoring sweep.
+
+==================================================
+6. Add Extra SSL-Only Sites
+==================================================
+
+Inside the SSL section, allow operators to add extra sites/domains only for SSL monitoring.
+
+These sites may not necessarily be part of the main monitored websites.
+
+Requirements:
+- add SSL-only domain
+- edit SSL-only domain
+- remove SSL-only domain
+- optionally link SSL-only domain to an existing monitored site
+- include SSL-only domains in the 24-hour SSL scan
+- clearly distinguish SSL-only entries from normal monitored sites
+
+==================================================
+7. SSL Preview Card In Overview Dashboard
+==================================================
+
+Add an SSL summary preview card in the main Overview/Dashboard.
+
+This card should summarize the SSL section.
+
+Show:
+- total SSL tracked domains
+- healthy count
+- expiring soon count
+- invalid count
+- last SSL scan time
+- next SSL scan time
+- shortcut link to SSL section
+
+This should be a preview/summary only, not a popup.
+
+Clicking the card should navigate to the SSL section.
+
+==================================================
+8. Theme Persistence Fix
+==================================================
+
+When the user selects Dark Mode or Light Mode in Settings, the preference must persist permanently.
+
+Currently, the mode may reset when:
+- opening a new tab
+- refreshing
+- reopening the app later
+
+Fix this.
+
+Requirements:
+- persist theme preference in localStorage and/or user settings API
+- apply theme immediately on app startup before UI flash
+- keep selected mode across:
+  - refresh
+  - new tab
+  - browser restart
+  - later sessions
+- do not reset theme unless user changes it again
+
+If user setting exists in backend, backend preference should be source of truth after login.
+Before login/setup, localStorage may be used.
+
+==================================================
+9. General Quality Requirements
+==================================================
+
+Implement these changes cleanly.
+
+Do not break:
+- server-based monitoring redesign
+- existing dashboard
+- RTL/Persian support
+- dark NOC theme
+- site diagnostics
+- payment gateway section
+- DNS section
+
+Make the implementation production-grade, predictable, and operator-friendly.

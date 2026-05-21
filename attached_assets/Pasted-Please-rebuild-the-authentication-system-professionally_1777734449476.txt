@@ -1,0 +1,427 @@
+Please rebuild the authentication system professionally and cleanly from the beginning for this existing Hosting Manager / NOC Monitoring project.
+
+Current problem:
+The current auth/login system is not reliable. For example, after setting a password, login sometimes says the password is wrong. Some auth flows are not logical.
+
+Goal:
+Create a clean, secure, predictable authentication system with first-time founder registration, then normal login for all users.
+
+Important:
+- Do not rewrite the whole app.
+- Keep the current project architecture.
+- Replace/fix the current auth implementation cleanly.
+- Remove broken auth logic if needed.
+- Use secure password hashing.
+- Do not store plaintext passwords.
+- Do not expose secrets to frontend.
+- Keep TypeScript clean.
+
+Project context:
+- Backend: Express + TypeScript
+- Frontend: React + Vite
+- Database: PostgreSQL + Drizzle
+- App type: Hosting / NOC Monitoring Dashboard
+- Existing roles may include admin/operator/viewer.
+
+1. First-time founder registration
+
+When the website is opened and there are no users in the database:
+
+- Show a first-time setup page.
+- This page should create the first user as the Founder/Admin.
+- This setup should happen only when user count = 0.
+
+Founder setup fields:
+- First name
+- Last name
+- Display name
+- Email
+- Username
+- Password
+- Confirm password
+
+Validation:
+- All fields required.
+- Email must be valid.
+- Username must be unique.
+- Password minimum 8 characters.
+- Password and confirm password must match.
+
+After successful setup:
+- Create the first user with role:
+  founder or admin
+- Prefer role: founder if role system supports it.
+- If not, use admin with isFounder = true.
+- Automatically log in the founder.
+- Redirect to dashboard.
+
+Important:
+This setup page must NOT appear again after the first user is created.
+
+2. Normal login after setup
+
+After the founder account exists:
+
+- Opening the app should show the login page if user is not authenticated.
+- No public registration page should be available.
+- Only founder/admin can create other users from inside the panel.
+
+Login fields:
+- Username or email
+- Password
+
+Behavior:
+- If credentials are valid → login and redirect to dashboard.
+- If invalid → show a clear error.
+- Do not say whether username/email or password is wrong separately.
+- Use generic error:
+  “Invalid username/email or password.”
+
+3. Fix password hashing and verification
+
+This is critical.
+
+Implement password handling correctly and consistently.
+
+Requirements:
+- Use bcrypt or argon2.
+- On user creation:
+  - hash password once
+  - store only passwordHash
+- On login:
+  - find user by username OR email
+  - verify submitted password against passwordHash
+- Do not double-hash passwords.
+- Do not compare plaintext password with hash.
+- Do not accidentally store the password field instead of passwordHash.
+- Make sure setup, user creation, reset password, and change password all use the same hash/verify functions.
+
+Add tests or debug-safe checks if possible.
+
+4. Session/auth token system
+
+Implement a reliable session system.
+
+Preferred:
+- httpOnly cookie session
+
+Requirements:
+- Cookie name: noc_token or similar
+- httpOnly: true
+- sameSite: lax
+- secure: true in production, false in local dev if needed
+- maxAge: 7 days or configurable
+- path: "/"
+
+Backend:
+- Login sets session cookie.
+- Logout clears session cookie.
+- Auth middleware reads cookie.
+- Auth middleware also optionally supports Bearer token for API testing.
+
+Frontend:
+- All auth fetch requests must use:
+  credentials: "include"
+
+Important:
+Make sure CORS/cookie settings work correctly in Replit and local development.
+
+5. Auth endpoints
+
+Add/fix these endpoints:
+
+GET /api/auth/setup-status
+Returns:
+{
+  "setupRequired": true | false
+}
+
+POST /api/auth/setup
+Creates first founder/admin user only if no users exist.
+
+POST /api/auth/login
+Logs in existing user.
+
+POST /api/auth/logout
+Logs out current user.
+
+GET /api/auth/me
+Returns current authenticated user.
+
+POST /api/auth/change-password
+Authenticated user changes their own password.
+
+Optional admin endpoints:
+GET /api/users
+POST /api/users
+PATCH /api/users/:id
+PATCH /api/users/:id/role
+PATCH /api/users/:id/status
+POST /api/users/:id/reset-password
+
+6. Route protection
+
+Frontend:
+- Before showing app routes, call /api/auth/setup-status.
+- If setupRequired = true → show Founder Setup page.
+- Else call /api/auth/me.
+- If authenticated → show app.
+- If not authenticated → show Login page.
+
+Protected routes:
+- Dashboard
+- Charts & Status
+- Monitored Sites
+- Incidents
+- Logs
+- Live Console
+- Settings
+- DNS Performance
+- User management
+- Profile
+- Site detail pages
+
+Unauthenticated users should only see:
+- Founder setup page if no users exist
+- Login page if setup already completed
+
+7. User roles and permissions
+
+Implement or fix roles cleanly.
+
+Roles:
+- founder
+- admin
+- operator
+- viewer
+
+If founder role is too much, use:
+- role = admin
+- isFounder = true
+
+Recommended permissions:
+
+Founder:
+- Full access
+- Cannot be deleted
+- Can manage admins/operators/viewers
+- Can access all settings
+
+Admin:
+- Manage users except founder restrictions
+- Manage settings
+- Delete sites
+- Clear history
+- Run checks
+- Pause/resume monitoring
+- Manage DNS resolvers
+
+Operator:
+- Use dashboard
+- Run checks
+- Manage incidents
+- Add to queue
+- Generate reports
+- View logs
+- View DNS Performance
+- Cannot manage users
+- Cannot delete important settings unless allowed
+
+Viewer:
+- Read-only
+- Can view dashboard/charts/sites/incidents/logs
+- Cannot run checks
+- Cannot delete
+- Cannot pause/resume
+- Cannot manage users/settings
+
+Important:
+- Enforce permissions in backend.
+- Frontend hiding buttons is not enough.
+
+8. User management panel
+
+After founder/admin logs in, they should be able to create users.
+
+Add/fix Users management page.
+
+Founder/admin can:
+- Create operator/viewer/admin accounts
+- Edit first name / last name / display name / email / username
+- Change role
+- Enable/disable user
+- Reset password
+- View last login time
+
+Safety:
+- Do not allow deleting/disabling the only founder/admin.
+- Do not allow non-founder admins to remove founder privileges.
+- Disabled users cannot login.
+
+9. Profile and user identity in UI
+
+Top-right of app should show logged-in user.
+
+Show:
+- Display name or first + last name
+- Role badge
+- Avatar with initials
+
+Dropdown:
+- Profile
+- Change password
+- Logout
+
+Profile page:
+- View account info
+- Edit display name / first name / last name
+- Change password
+
+10. Database schema
+
+Use existing Drizzle conventions.
+
+Users table should include:
+- id
+- firstName
+- lastName
+- displayName
+- email
+- username
+- passwordHash
+- role
+- isFounder
+- status
+- lastLoginAt
+- createdAt
+- updatedAt
+
+Sessions table if using database sessions:
+- id
+- userId
+- tokenHash
+- expiresAt
+- createdAt
+- revokedAt
+
+If current auth tables exist but are broken:
+- Migrate or clean them carefully.
+- Do not leave duplicate conflicting auth tables.
+
+11. Important bug to fix
+
+Current bug:
+First account can be created, but login says invalid_credentials or wrong password.
+
+Investigate and fix:
+- frontend calling /auth/login instead of /auth/setup during first setup
+- wrong endpoint paths (/auth vs /api/auth)
+- missing credentials: include
+- password double hashing
+- passwordHash not stored correctly
+- loginUser not searching username/email correctly
+- cookie not set or not sent
+- auth middleware reading wrong cookie name
+- CORS credentials issue
+
+Please verify the full flow end-to-end.
+
+12. Localization
+
+Add English and Persian translations for all auth UI.
+
+Examples:
+Login → ورود
+Logout → خروج
+Founder Setup → راه‌اندازی اولیه
+Create Founder Account → ساخت حساب موسس
+Username → نام کاربری
+Email → ایمیل
+Password → رمز عبور
+Confirm Password → تکرار رمز عبور
+First Name → نام
+Last Name → نام خانوادگی
+Display Name → نام نمایشی
+Invalid username/email or password → نام کاربری/ایمیل یا رمز عبور اشتباه است
+Users → کاربران
+Role → نقش
+Founder → موسس
+Admin → مدیر
+Operator → اپراتور
+Viewer → مشاهده‌گر
+Disabled → غیرفعال
+Active → فعال
+Change Password → تغییر رمز عبور
+Profile → پروفایل
+
+Do not show raw translation keys.
+
+13. Security requirements
+
+- Hash passwords securely.
+- Validate inputs.
+- Never log passwords.
+- Never return passwordHash to frontend.
+- Generic login error for invalid credentials.
+- Protect all private endpoints.
+- Use backend permission checks.
+- Add rate limiting for login if easy.
+- Add audit logs for important actions if existing logging supports it.
+
+Audit log examples:
+- founder setup completed
+- login success
+- login failed
+- logout
+- password changed
+- user created
+- user disabled/enabled
+- role changed
+
+14. Testing checklist
+
+After implementation, test:
+
+A) Fresh database / no users:
+- App opens founder setup page.
+- Create founder.
+- Founder is logged in.
+- App redirects to dashboard.
+
+B) After founder exists:
+- App opens login page for unauthenticated users.
+- Setup page is no longer available.
+
+C) Login:
+- Login works with username.
+- Login works with email.
+- Wrong password shows generic error.
+- Correct password works.
+
+D) Session:
+- Refresh page keeps user logged in.
+- Logout clears session.
+- After logout, protected pages redirect to login.
+
+E) Users:
+- Founder/admin can create operator/viewer.
+- Operator can login.
+- Viewer can login.
+- Disabled user cannot login.
+
+F) Permissions:
+- Viewer cannot run checks.
+- Operator cannot manage users.
+- Admin/founder can manage users.
+
+15. Final report
+
+After implementation, explain:
+1. What was wrong with the old auth system.
+2. What auth files were replaced or changed.
+3. How founder setup works.
+4. How login/session works.
+5. How roles and permissions work.
+6. What database changes were added.
+7. How to test the full auth flow.
+8. Any required environment variables.

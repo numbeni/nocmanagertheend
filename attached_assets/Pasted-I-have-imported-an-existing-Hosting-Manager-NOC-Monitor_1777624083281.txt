@@ -1,0 +1,188 @@
+I have imported an existing Hosting Manager / NOC Monitoring project. Do NOT rebuild or redesign the app. Keep the current architecture, UI structure, and logic. Only fix and improve the following issues with clean, production-level implementation.
+
+---
+
+### 1. Fix SSL stats disappearing in dashboard
+
+Problem:
+SSL statistics in the dashboard sometimes disappear when monitoring is not running.
+
+Expected behavior:
+- SSL stats must ALWAYS be visible in the dashboard.
+- Even if monitoring is paused or stopped, the last known SSL data should still be displayed.
+- Do NOT depend only on live monitoring state.
+- Use persisted data from database or last cached state.
+
+Fix:
+- Ensure SSL stats are fetched from stored data, not only live state.
+- Add fallback logic:
+  - If no fresh data → show last known values.
+- Prevent UI flicker or empty states for SSL section unless truly no data exists.
+
+---
+
+### 2. Fix Light Mode UI/UX color inconsistencies
+
+Problem:
+Light mode has many poor color combinations and contrast issues.
+
+Examples:
+- Live Console is black in light mode → not acceptable.
+- SSL section text is white on light background → unreadable.
+- General contrast issues across UI.
+
+Required:
+- Review the entire UI in Light Mode.
+- Fix ALL color contrast issues.
+- Follow proper UX/UI readability standards.
+
+Fix:
+- Use theme-based colors (light vs dark).
+- Ensure:
+  - Text is always readable
+  - Background/text contrast is correct
+- Live Console:
+  - Should NOT be black in light mode
+  - Use light background with subtle contrast
+- Dashboard cards:
+  - Fix any white-on-light issues
+- Maintain consistency across all components
+
+Goal:
+Light mode should be clean, professional, and easy for operators to read for long sessions.
+
+---
+
+### 3. Fix and redesign "Grid View" for monitored sites
+
+Problem:
+There is a setting for changing monitored sites display (list vs grid), but it does not work.
+
+Required:
+- Fully implement this feature.
+
+Behavior:
+User can choose between:
+1. List view (current default)
+2. Grid view (new improved UI)
+
+Grid View design:
+- Display sites as cards (like the image provided)
+- Each site is a rounded rectangle or square
+- Soft border radius
+- Clean spacing (like a dashboard grid)
+
+Color coding:
+- Green → UP
+- Red → DOWN
+- Yellow → SLOW
+- Orange → DEGRADED
+- Purple or gray → UNSTABLE / UNKNOWN
+
+Each card should show:
+- Site name
+- Status
+- Optional small latency value
+
+UX:
+- Responsive layout (auto wrap)
+- Smooth hover effect
+- Clean spacing between items
+- Use grid layout, not fixed positioning
+
+Settings:
+- Setting must properly toggle between list and grid view
+- Save preference (localStorage or backend)
+
+---
+
+### 4. Improve Monitoring Queue UX
+
+Problem:
+Queue behavior is not intuitive and visually unstable.
+
+Fix and improve:
+
+A) Countdown to next monitoring cycle
+- Show:
+  "Next monitoring cycle in: 2m 30s"
+- Even when no site is currently being checked
+- Must update live (countdown)
+
+B) Queue should always exist visually
+- Do NOT let queue appear/disappear suddenly
+- Always show structure:
+  - current
+  - upcoming
+
+C) Show upcoming queue clearly
+- Show next sites to be checked in order
+- Highlight currently checking site
+
+D) Scrollable queue
+- If queue grows:
+  - Do NOT expand container height excessively
+  - Make queue scrollable
+- Keep layout stable
+
+E) Smooth animations
+- When items:
+  - enter queue
+  - leave queue
+- Use smooth transitions (not jumpy)
+
+F) Status states:
+Each item can show:
+- waiting
+- checking
+- done
+
+G) Clean UI:
+- No jitter
+- No layout jumping
+- Consistent spacing
+
+---
+
+### 5. General layout & spacing improvement (Charts & Status + Dashboard)
+
+Fix:
+- Inconsistent spacing
+- Misaligned components
+- Uneven padding/margins
+
+Follow proper spacing rules:
+- Consistent gap between elements
+- Balanced card sizes
+- Avoid large empty areas
+- Align charts and cards properly
+
+Use clean grid layout:
+Example:
+- Equal spacing between cards
+- Consistent vertical rhythm
+
+---
+
+### 6. Quality requirements
+
+- Do NOT break existing features
+- Keep TypeScript clean
+- Do NOT hardcode colors → use theme system
+- Keep UI responsive
+- Keep performance optimized
+- Avoid unnecessary re-renders
+- Maintain clean component structure
+
+---
+
+### 7. After implementation report
+
+Explain clearly:
+1. What files were changed
+2. How SSL fallback was implemented
+3. How light mode issues were fixed
+4. How grid view works now
+5. How queue countdown works
+6. What UI improvements were applied
+7. How to test each feature

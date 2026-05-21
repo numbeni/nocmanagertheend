@@ -1,0 +1,176 @@
+Apply the following improvements to the existing project. You already understand the codebase, so focus on integrating these changes cleanly without breaking current functionality.
+
+IMPORTANT: Do NOT rewrite everything. Extend and refactor where needed.
+
+---
+
+1. Fix “Not Stable” vs “Down” logic
+
+Refine the status logic as follows:
+
+- A website that has NEVER been successfully reached (never had a successful check) should be `Down` by default.
+- `Not Stable` should ONLY be used for websites that:
+  - were previously reachable (at least one successful check in the past),
+  - but are now failing intermittently.
+
+Suggested logic:
+- Add a flag like: `hasEverBeenUp`
+- If `hasEverBeenUp = false` and check fails → status = `Down`
+- If `hasEverBeenUp = true` and:
+  - 1–2 consecutive failures → `Not Stable`
+  - 3+ consecutive failures → `Down`
+- If a failed site becomes successful again → reset to `Stable`
+
+This must persist in database/state (not just in-memory).
+
+---
+
+2. Add Language Switch (English / Persian)
+
+Add a UI toggle/button in a proper location (header or top bar) to switch between English and Persian.
+
+Requirements:
+- Persian translation must be semantic and professional (NOT literal word-by-word translation).
+- Keep technical terms in English where translating them would reduce clarity:
+  (e.g., DNS, HTTP, SSL, Timeout, Resolver, Ping, Status Code)
+- Translate only where it improves operator understanding.
+- UI must support RTL properly for Persian.
+- Store selected language (e.g., localStorage or user settings).
+- Do NOT break layout when switching languages.
+
+Examples:
+- Stable → پایدار
+- Not Stable → ناپایدار
+- Down → قطع
+- Dashboard → داشبورد
+- Monitoring → پایش
+
+---
+
+3. Completely redesign “Blocked” detection
+
+Remove ANY hardcoded or manual blocked site list (e.g., banks, e-commerce, etc.).
+
+Blocked must ONLY be used when access is explicitly denied by the target system.
+
+Correct definition:
+Blocked = target server is actively rejecting access (IP restriction, geo restriction, WAF, firewall, etc.)
+
+Valid signals:
+- HTTP 403
+- HTTP 451
+- Response contains:
+  - “access denied”
+  - “forbidden”
+  - “blocked”
+  - “security policy”
+  - “geo restriction”
+  - “your IP has been blocked”
+  - WAF/Cloudflare challenge
+
+NOT Blocked:
+- DNS failure
+- timeout
+- connection refused
+- SSL errors
+- 5xx errors
+
+Implementation:
+- Create a detection function (e.g., `detectBlockedStatus`)
+- Store:
+  - `isBlocked`
+  - `blockedReason`
+  - `lastHttpStatus`
+- Show reason in UI and logs
+- Auto-clear blocked state if site becomes accessible again
+- Add log:
+  [BLOCKED] example.com - HTTP 403 (possible geo/IP restriction)
+
+Accuracy is critical. Avoid false positives.
+
+---
+
+4. Fix DNS Resolve & DNS Health behavior
+
+Current issue:
+- DNS results often show "-" (missing data)
+- DNS check requires separate “global check” → NOT acceptable
+
+Fix it:
+
+- DNS resolve must be part of the NORMAL site check flow.
+- Every site check should:
+  1. Resolve DNS
+  2. Then perform HTTP check
+
+Display in dashboard:
+- resolved IP(s)
+- resolver used
+- resolve time
+- last DNS check timestamp
+- DNS errors (if any)
+
+Rules:
+- “-” should only appear if truly no data exists
+- Otherwise show meaningful states like:
+  - “Not checked yet”
+  - “Resolve failed”
+
+- Global check can remain, but MUST NOT be required for DNS health visibility.
+
+Also integrate custom DNS resolvers (from previous feature if present).
+
+---
+
+5. Bulk Add Websites (Manual + TXT Import)
+
+Add the ability to add multiple websites at once.
+
+Two input methods:
+
+A) Textarea input:
+- Each line = one site
+- Supported formats:
+  google.com
+  https://openai.com
+  Google | google.com
+  MySite, mysite.com
+
+B) Import from `.txt` file:
+- Same formats as above
+- Support UTF-8
+
+Behavior:
+- Auto-add `https://` if missing
+- Validate URLs
+- Remove duplicates
+- If name is missing → generate from domain
+- Do NOT crash on bad input
+
+After import:
+Show summary:
+- total processed
+- successfully added
+- duplicates
+- invalid entries (with line references)
+
+All imported sites must enter normal monitoring flow immediately.
+
+---
+
+General Requirements:
+- Keep code clean and consistent with existing architecture
+- Add validation and error handling
+- Update DB schema if needed (with migration)
+- Ensure logs reflect new behaviors (DNS, Blocked, Bulk import, status changes)
+- Do not break UI/UX
+- Ensure performance is not degraded
+
+---
+
+Expected Result:
+- Status logic is accurate (Down vs Not Stable)
+- Language switch works cleanly with proper Persian UX
+- Blocked is intelligent and evidence-based (no hardcoding)
+- DNS health is always visible without manual checks
+- Bulk site import works smoothly and safely

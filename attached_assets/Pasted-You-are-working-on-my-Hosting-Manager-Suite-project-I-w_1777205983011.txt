@@ -1,0 +1,546 @@
+You are working on my Hosting Manager Suite project.
+
+I want you to improve the monitoring system, operator dashboard, diagnostics, bulk import behavior, and status logic.
+
+Do not break the existing architecture. Keep the implementation modular, TypeScript-safe, and consistent with the current backend, frontend, Drizzle database, and OpenAPI/client setup.
+
+---
+
+# 1. Fix monitoring status logic
+
+## Problem
+
+Currently, the system treats `degraded` as a failure, which causes sites to be marked as `down` even when they are actually reachable.
+
+Example:
+
+* HTTP status is 200
+* DNS is OK
+* SSL expires soon
+* Check result becomes `degraded`
+* But `degraded` increases `consecutiveFailures`
+* Eventually the overall site status becomes `down`
+
+This is incorrect.
+
+## Expected behavior
+
+Clearly separate **reachability** from **quality issues**.
+
+### Reachable states — NOT failures
+
+These should NOT increase `consecutiveFailures`:
+
+```text
+up
+slow
+degraded
+```
+
+These mean the site is accessible.
+
+### Failure states
+
+Only real unreachable states should increase `consecutiveFailures`, such as:
+
+```text
+down
+timeout
+dns_failure
+connection_failed
+tcp_unreachable
+fetch_failed
+```
+
+## Required changes
+
+Find logic like:
+
+```ts
+if (raw !== "down" && raw !== "degraded") return raw;
+```
+
+Change it to:
+
+```ts
+if (raw !== "down") return raw;
+```
+
+Find logic like:
+
+```ts
+if (status === "down" || status === "degraded") {
+  consecutiveFailures++;
+}
+```
+
+Change it to:
+
+```ts
+if (status === "down") {
+  consecutiveFailures++;
+} else {
+  consecutiveFailures = 0;
+}
+```
+
+Whenever a check result is:
+
+```text
+up
+slow
+degraded
+```
+
+reset:
+
+```ts
+consecutiveFailures = 0;
+```
+
+Final rules:
+
+```text
+down      = truly unreachable
+degraded  = reachable but has issues, such as SSL expiring soon
+slow      = reachable but high latency
+up        = fully healthy
+```
+
+After this fix:
+
+* SSL warnings should result in `degraded`, not `down`
+* A site that responds with HTTP 200 must not be marked as `down`
+* `down` should only represent real outages
+
+Apply this across all relevant monitoring logic, database updates, site status derivation, incident logic, and API responses.
+
+---
+
+# 2. Curl-style URL diagnostic check
+
+Add a diagnostic feature similar to a simplified `curl`.
+
+## Purpose
+
+Quickly show whether a URL is reachable and what HTTP response it returns.
+
+## Logic
+
+For each monitored site or manually requested URL:
+
+* Send an HTTP request
+* Follow redirects
+* Capture:
+
+  * original URL
+  * final URL after redirects
+  * HTTP status code
+  * response time in ms
+  * redirect count
+  * content-type
+  * server header if available
+  * status group: `2xx`, `3xx`, `4xx`, `5xx`
+  * ok boolean
+  * error message if request fails
+
+Example output:
+
+```json
+{
+  "url": "https://example.com",
+  "finalUrl": "https://www.example.com",
+  "statusCode": 200,
+  "responseTimeMs": 140,
+  "redirectCount": 1,
+  "contentType": "text/html",
+  "server": "nginx",
+  "statusGroup": "2xx",
+  "ok": true,
+  "errorMessage": null
+}
+```
+
+Important:
+
+* Do not mark the whole site as down only because this diagnostic fails.
+* This is a diagnostic tool, not the main status source.
+* Add a manual UI button: `Run Curl Check`.
+
+---
+
+# 3. Product / Category availability check
+
+Add an optional ecommerce diagnostic check based on my old `unixcheck.py` logic.
+
+## Purpose
+
+A shop homepage may be reachable, but product/category pages may be broken. This check detects that.
+
+## Logic
+
+For a site:
+
+1. Fetch homepage HTML.
+2. Extract links from `<a href="">`.
+3. Look for ecommerce-related patterns:
+
+```text
+/product
+/products
+/item
+/shop
+/store
+/category
+/categories
+/cat
+/collection
+/collections
+/cart
+/checkout
+```
+
+4. Normalize relative links into absolute URLs.
+5. Randomly sample 3 to 5 discovered URLs.
+6. Test each sampled URL with a lightweight HTTP request.
+7. Consider the check successful if at least one sampled product/category URL returns:
+
+```text
+200
+301
+302
+```
+
+8. If no product/category links are found on the homepage, try common sitemap URLs:
+
+```text
+/product-sitemap.xml
+/sitemap_products_1.xml
+/sitemap.xml
+```
+
+9. Extract URLs from sitemap XML and test product/category-like links from there.
+
+## Output
+
+```json
+{
+  "enabled": true,
+  "status": "ok",
+  "productPagesFound": true,
+  "source": "homepage",
+  "checkedUrls": [
+    "https://shop.com/product/example-item",
+    "https://shop.com/category/mobile"
+  ],
+  "workingUrls": [
+    "https://shop.com/product/example-item"
+  ],
+  "message": "Product/category pages are accessible"
+}
+```
+
+## Status meanings
+
+```text
+ok       = at least one product/category URL works
+warning  = product/category links were found but some failed
+failed   = no product/category pages could be reached
+unknown  = check disabled or not enough data
+```
+
+Important:
+
+* This check must be optional per site.
+* Not every monitored site is an ecommerce site.
+* Add field such as:
+
+```ts
+productCheckEnabled: boolean
+```
+
+* If disabled, do not run it automatically.
+* Do not mark the whole site as down because product/category pages fail.
+* Show it as diagnostic/warning only.
+
+---
+
+# 4. Better automatic monitoring interval
+
+Adjust the automatic monitoring interval to be more practical and configurable.
+
+## Required behavior
+
+* Make the automatic monitoring interval configurable via environment variable.
+* Example:
+
+```env
+MONITOR_INTERVAL_MS=60000
+```
+
+* Use a safe default if env is missing.
+* The interval should be somewhat shorter than the current long delay, but not so aggressive that it overloads local testing.
+* Suggested default:
+
+```text
+60000 ms
+```
+
+Also make sure logs clearly show the active interval.
+
+---
+
+# 5. Better bulk import initial checks
+
+Currently, when many sites are bulk imported, the app appears to auto-check them too aggressively and many sites get marked down.
+
+## Required behavior
+
+When bulk importing many sites:
+
+* Do not fire all initial checks at once.
+* Queue them.
+* Check them one by one or with very small concurrency.
+* Add delay between checks.
+
+Suggested behavior:
+
+```text
+concurrency: 1 or 2
+delay between checks: 2–5 seconds
+```
+
+This should reduce false negatives caused by DNS/network overload.
+
+Important:
+
+* Bulk import should still return a summary immediately.
+* Initial checks can run in the background.
+* Log progress clearly.
+* Do not crash if one check fails.
+
+---
+
+# 6. Add “Run Check for All Sites” button
+
+In the Dashboard Overview section, add a manual action:
+
+```text
+Run Check for All Sites
+```
+
+## Behavior
+
+* Button triggers a backend endpoint to run checks for all enabled sites.
+* Do not run all checks fully parallel.
+* Use the same safe queue logic as bulk import.
+* Show loading state in UI.
+* Show success/failure toast.
+
+Suggested endpoint:
+
+```text
+POST /api/sites/run-check-all
+```
+
+Response example:
+
+```json
+{
+  "queued": true,
+  "siteCount": 42,
+  "message": "Manual check queued for 42 sites"
+}
+```
+
+---
+
+# 7. Delete sites from Dashboard monitored sites table
+
+In the Dashboard → Monitored Sites table, add a way to delete sites.
+
+Preferred UX:
+
+Option A:
+
+* Add checkboxes to select multiple sites
+* Add a `Delete selected` button above the table
+* Confirm before deleting
+
+Option B:
+
+* Add a delete action per row
+* Also support bulk delete if reasonable
+
+## Backend
+
+Add endpoint if missing:
+
+```text
+DELETE /api/sites/:id
+```
+
+For bulk delete:
+
+```text
+POST /api/sites/bulk-delete
+```
+
+Payload:
+
+```json
+{
+  "ids": [1, 2, 3]
+}
+```
+
+Important:
+
+* Confirm deletion in UI.
+* Invalidate/refetch sites and dashboard queries after delete.
+* Do not crash if an id does not exist.
+* Consider related checks/incidents cleanup or safe cascading based on current DB design.
+
+---
+
+# 8. Open incident notification badge on Dashboard
+
+On the main Dashboard, next to or near the Incidents card/widget, show a notification-like badge with the count of open incidents.
+
+Example:
+
+```text
+Open incidents: 5
+```
+
+or a red badge:
+
+```text
+5 open
+```
+
+Behavior:
+
+* Count only incidents with status `open`.
+* If count is 0, show a calm/green state.
+* If count > 0, show red/warning state.
+* Clicking it should navigate to `/incidents?status=open` or the open incidents tab if supported.
+
+---
+
+# 9. API and OpenAPI requirements
+
+If new endpoints or response fields are added:
+
+* Update OpenAPI contract.
+* Regenerate API client if the project uses generated clients.
+* Keep frontend and backend types aligned.
+
+Potential endpoints:
+
+```text
+POST /api/sites/:id/run-curl-check
+POST /api/sites/:id/run-product-check
+GET /api/sites/:id/diagnostics
+POST /api/sites/run-check-all
+DELETE /api/sites/:id
+POST /api/sites/bulk-delete
+```
+
+---
+
+# 10. Database requirements
+
+If useful, persist latest diagnostic results:
+
+```text
+latestCurlDiagnostic
+latestProductCheck
+productCheckEnabled
+lastProductCheckAt
+```
+
+Use the existing Drizzle schema style.
+
+If schema changes are made, update the migration/db push instructions.
+
+---
+
+# 11. UI requirements
+
+In the site detail page, add a Diagnostics section.
+
+## Curl Diagnostic
+
+Show:
+
+* final URL
+* status code
+* response time
+* redirect count
+* content type
+* server header
+* status group
+* error message if any
+
+Add button:
+
+```text
+Run Curl Check
+```
+
+## Product / Category Check
+
+Show:
+
+* enabled / disabled
+* status
+* source: homepage or sitemap
+* checked URLs
+* working URLs
+* message
+
+Add buttons:
+
+```text
+Enable Product Check
+Run Product Check
+```
+
+---
+
+# 12. Operator-friendly behavior
+
+Show clear messages such as:
+
+```text
+Homepage is reachable, but no product/category pages were found.
+```
+
+```text
+Product/category page is reachable: /product/example-item
+```
+
+```text
+Site is reachable, but SSL expires in 2 days.
+```
+
+---
+
+# 13. Important implementation rules
+
+* Keep code modular.
+* Add timeouts to all network checks.
+* Add error handling.
+* Do not crash the monitoring loop.
+* Avoid duplicate logs/spam.
+* Do not treat diagnostic failures as full site downtime.
+* Do not treat `degraded` as `down`.
+* Keep Persian/English UI translation style consistent with the existing project.
+* Preserve existing monitoring behavior unless explicitly fixed above.
+* After implementation, explain:
+
+  * which files changed
+  * how to test locally
+  * what commands to run
+  * a short checklist for status logic, bulk import, diagnostics, delete, and run-all-check

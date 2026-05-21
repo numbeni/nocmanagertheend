@@ -1,0 +1,1975 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: NOC monitoring API for hosting company website monitoring & incident detection
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+  - name: sites
+  - name: monitoring
+  - name: incidents
+  - name: alerts
+  - name: dns
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /sites:
+    get:
+      operationId: listSites
+      tags: [sites]
+      summary: List monitored sites with current status
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SiteStatus"
+    post:
+      operationId: createSite
+      tags: [sites]
+      summary: Add a new site to monitor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSiteBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Site"
+
+  /sites/bulk:
+    post:
+      operationId: bulkAddSites
+      tags: [sites]
+      summary: Bulk add sites from a newline-separated text payload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkAddSitesBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkAddSitesResult"
+
+  /sites/bulk-delete:
+    post:
+      operationId: bulkDeleteSites
+      tags: [sites]
+      summary: Delete multiple sites by id (also cascades checks/incidents)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkDeleteSitesBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkDeleteSitesResult"
+
+  /sites/run-check-all:
+    post:
+      operationId: runCheckAllSites
+      tags: [monitoring]
+      summary: Queue an on-demand check for every enabled site (staggered, non-blocking)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunCheckAllResult"
+        "409":
+          description: Monitoring is paused — refuse to run an on-demand check.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MonitoringStoppedError"
+
+  /sites/{id}:
+    get:
+      operationId: getSite
+      tags: [sites]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteStatus"
+    delete:
+      operationId: deleteSite
+      tags: [sites]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+    patch:
+      operationId: updateSite
+      tags: [sites]
+      summary: Update mutable site fields (name, enabled, region, productCheckEnabled)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSiteBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteStatus"
+
+  /sites/bulk-clear-checks:
+    post:
+      operationId: bulkClearSiteChecks
+      tags: [monitoring]
+      summary: Clear check history for multiple sites
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: integer
+                  siteIds:
+                    type: array
+                    items:
+                      type: integer
+
+  /sites/{id}/checks:
+    get:
+      operationId: getSiteChecks
+      tags: [monitoring]
+      summary: Time-series check history for a site
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CheckResult"
+    delete:
+      operationId: clearSiteChecks
+      tags: [monitoring]
+      summary: Delete all check history for a site
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: integer
+                  siteId:
+                    type: integer
+
+  /sites/{id}/uptime:
+    get:
+      operationId: getSiteUptime
+      tags: [monitoring]
+      summary: Uptime statistics for a site
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: hours
+          in: query
+          schema:
+            type: integer
+            default: 24
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UptimeStats"
+
+  /sites/{id}/run-check:
+    post:
+      operationId: runSiteCheck
+      tags: [monitoring]
+      summary: Trigger an on-demand check
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckResult"
+
+  /sites/{id}/diagnostics:
+    get:
+      operationId: getSiteDiagnostics
+      tags: [monitoring]
+      summary: Advanced DNS / HTTP / SSL / product diagnostics for a site
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiagnosticsReport"
+
+  /sites/{id}/run-product-check:
+    post:
+      operationId: runSiteProductCheck
+      tags: [monitoring]
+      summary: Run the optional product-page checker for a site
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductCheckResult"
+
+  /sites/{id}/run-curl-check:
+    post:
+      operationId: runSiteCurlCheck
+      tags: [monitoring]
+      summary: Run a simple curl-style HTTP probe (diagnostic only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurlCheckResult"
+
+  /admin/nextcloud-talk-status:
+    get:
+      operationId: getNextcloudTalkStatus
+      tags: [admin]
+      summary: Nextcloud Talk alert configuration & last delivery status
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NextcloudTalkStatus"
+
+  /admin/test-nextcloud-talk:
+    post:
+      operationId: sendTestNextcloudTalk
+      tags: [admin]
+      summary: Send a bilingual test alert to verify the Nextcloud Talk setup
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestNextcloudTalkResult"
+
+  /incidents:
+    get:
+      operationId: listIncidents
+      tags: [incidents]
+      summary: List incidents
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, acknowledged, resolved, all]
+            default: all
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: sortBy
+          in: query
+          description: Field to sort by. `createdAt` is an alias for `startedAt`.
+          schema:
+            type: string
+            enum: [updatedAt, startedAt, createdAt]
+            default: updatedAt
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Incident"
+
+  /incidents/{id}:
+    get:
+      operationId: getIncident
+      tags: [incidents]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IncidentDetail"
+
+  /incidents/{id}/acknowledge:
+    post:
+      operationId: acknowledgeIncident
+      tags: [incidents]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+
+  /incidents/{id}/resolve:
+    post:
+      operationId: resolveIncident
+      tags: [incidents]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveIncidentBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+
+  /incidents/{id}/notes:
+    get:
+      operationId: getIncidentNotes
+      tags: [incidents]
+      summary: List notes attached to an incident (chronological)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IncidentNote"
+    post:
+      operationId: createIncidentNote
+      tags: [incidents]
+      summary: Add a free-form operator note to an incident
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateIncidentNoteBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IncidentNote"
+
+  /monitor/status:
+    get:
+      operationId: getMonitorStatus
+      tags: [monitoring]
+      summary: Get current monitoring engine state (paused / running)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MonitorState"
+
+  /monitor/pause:
+    post:
+      operationId: pauseMonitoring
+      tags: [monitoring]
+      summary: Pause the active monitoring loop
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MonitorState"
+
+  /monitor/resume:
+    post:
+      operationId: resumeMonitoring
+      tags: [monitoring]
+      summary: Resume the active monitoring loop
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MonitorState"
+
+  /monitor/live-state:
+    get:
+      operationId: getMonitorLiveState
+      tags: [monitoring]
+      summary: Get live engine state — current target, last sweep timing
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MonitorState"
+
+  /monitoring/queue:
+    get:
+      operationId: getMonitoringQueue
+      tags: [monitoring]
+      summary: Live monitoring queue (sites waiting / checking / completed in the current sweep)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MonitoringQueueSnapshot"
+
+  /monitoring/queue/sites:
+    post:
+      operationId: addSiteToMonitoringQueue
+      tags: [monitoring]
+      summary: Manually add a single site to the active monitoring queue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                siteId: { type: integer }
+              required: [siteId]
+      responses:
+        "200":
+          description: Site added (or already in queue)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  added: { type: boolean }
+                  skipped: { type: boolean }
+                  reason: { type: string, nullable: true }
+                required: [added, skipped]
+        "409":
+          description: Monitoring is paused
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: { type: string }
+                  message: { type: string }
+                required: [error, message]
+
+  /monitoring/queue/sites/bulk:
+    post:
+      operationId: bulkAddSitesToMonitoringQueue
+      tags: [monitoring]
+      summary: Manually add multiple sites to the active monitoring queue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                siteIds:
+                  type: array
+                  items: { type: integer }
+              required: [siteIds]
+      responses:
+        "200":
+          description: Bulk add result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  addedCount: { type: integer }
+                  skippedCount: { type: integer }
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        siteId: { type: integer }
+                        added: { type: boolean }
+                        reason: { type: string, nullable: true }
+                      required: [siteId, added]
+                required: [addedCount, skippedCount, results]
+        "409":
+          description: Monitoring is paused
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: { type: string }
+                  message: { type: string }
+                required: [error, message]
+
+  /monitor/console-events:
+    get:
+      operationId: listConsoleEvents
+      tags: [monitoring]
+      summary: Poll the in-memory monitoring console event stream
+      parameters:
+        - name: since
+          in: query
+          description: Only return events with id greater than this cursor.
+          schema:
+            type: integer
+            minimum: 0
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 200
+            maximum: 500
+        - name: types
+          in: query
+          description: Comma-separated event types to filter (cycle,site,dns,http,ssl,tcp,incident,alert,system).
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsoleEventPage"
+
+  /settings:
+    get:
+      operationId: getAppSettings
+      tags: [admin]
+      summary: Read operator-controlled application settings
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppSettings"
+    put:
+      operationId: updateAppSettings
+      tags: [admin]
+      summary: Update one or more application settings (partial)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAppSettingsBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppSettings"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [monitoring]
+      summary: Aggregated NOC dashboard summary
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/recent-activity:
+    get:
+      operationId: getRecentActivity
+      tags: [monitoring]
+      summary: Recent monitoring events across all sites
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 30
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityEvent"
+
+  /dashboard/latency-trend:
+    get:
+      operationId: getLatencyTrend
+      tags: [monitoring]
+      summary: Latency trend across all sites for a selectable time range
+      description: |
+        Either `range` (preferred) or the legacy `hours` parameter can be
+        used. `range` selects a preset window with a server-chosen bucket
+        size so the response stays small (≲ 60 points) for any range.
+      parameters:
+        - name: range
+          in: query
+          description: Preset time window. Overrides `hours` when set.
+          schema:
+            type: string
+            enum: [30m, 1h, 12h, 24h, 7d]
+        - name: hours
+          in: query
+          description: Legacy time window in hours. Used when `range` is not set.
+          schema:
+            type: integer
+            default: 24
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LatencyTrendPoint"
+
+  /dashboard/check-stats-trend:
+    get:
+      operationId: getCheckStatsTrend
+      tags: [monitoring]
+      summary: Per-bucket check statistics (up/down/slow/DNS/SSL) for a selectable time range
+      parameters:
+        - name: range
+          in: query
+          schema:
+            type: string
+            enum: [30m, 1h, 12h, 24h, 7d]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CheckStatsTrendPoint"
+
+  /dashboard/incident-trend:
+    get:
+      operationId: getIncidentTrend
+      tags: [monitoring]
+      summary: Incidents created vs resolved per time bucket
+      parameters:
+        - name: range
+          in: query
+          schema:
+            type: string
+            enum: [30m, 1h, 12h, 24h, 7d]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IncidentTrendPoint"
+
+  /dashboard/top-unstable-sites:
+    get:
+      operationId: getTopUnstableSites
+      tags: [monitoring]
+      summary: Top 10 sites with the most check failures in the given range
+      parameters:
+        - name: range
+          in: query
+          schema:
+            type: string
+            enum: [30m, 1h, 12h, 24h, 7d]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UnstableSite"
+
+  /dns/check:
+    post:
+      operationId: runDnsCheck
+      tags: [dns]
+      summary: Run a Gold DNS multi-resolver health check
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DnsCheckBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DnsHealthReport"
+
+  /dns-resolvers:
+    get:
+      operationId: listDnsResolvers
+      tags: [dns]
+      summary: List custom and built-in DNS resolvers
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DnsResolverList"
+    post:
+      operationId: addDnsResolvers
+      tags: [dns]
+      summary: Add one or many custom DNS resolvers (bulk text or list)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddDnsResolversBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AddDnsResolversResult"
+
+  /dns-resolvers/{id}:
+    delete:
+      operationId: deleteDnsResolver
+      tags: [dns]
+      summary: Delete a custom DNS resolver
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+
+  /logs:
+    get:
+      operationId: listLogs
+      tags: [logs]
+      summary: List recent system event logs (newest first)
+      parameters:
+        - in: query
+          name: level
+          schema: { type: string, enum: [debug, info, warn, error, all] }
+        - in: query
+          name: category
+          schema: { type: string, enum: [system, monitor, incident, api, dns, all] }
+        - in: query
+          name: siteId
+          schema: { type: integer }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 1000, default: 200 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LogEntry"
+
+  /logs/export:
+    get:
+      operationId: exportLogs
+      tags: [logs]
+      summary: Download all logs as a plain text file
+      parameters:
+        - in: query
+          name: level
+          schema: { type: string, enum: [debug, info, warn, error, all] }
+        - in: query
+          name: category
+          schema: { type: string, enum: [system, monitor, incident, api, dns, all] }
+        - in: query
+          name: siteId
+          schema: { type: integer }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100000, default: 10000 }
+      responses:
+        "200":
+          description: Plain-text log file
+          content:
+            text/plain:
+              schema: { type: string }
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+
+    OverallStatus:
+      type: string
+      enum: [up, slow, down, degraded, blocked, not_stable, unknown]
+
+    Severity:
+      type: string
+      enum: [info, warning, critical]
+
+    IncidentType:
+      type: string
+      enum:
+        - dns_failure
+        - application_issue
+        - network_issue
+        - ssl_issue
+        - latency_issue
+        - timeout
+        - unknown
+
+    IncidentStatus:
+      type: string
+      enum: [open, acknowledged, resolved]
+
+    Site:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        url: { type: string }
+        host: { type: string }
+        enabled: { type: boolean }
+        region: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+      required: [id, name, url, host, enabled, region, createdAt]
+
+    BulkAddSitesBody:
+      type: object
+      properties:
+        text:
+          type: string
+          description: Newline-separated list. Each line accepts `domain.com`, `https://x.com`, `Name | url`, or `Name, url`.
+      required: [text]
+
+    BulkAddSitesResult:
+      type: object
+      properties:
+        totalProcessed: { type: integer }
+        addedCount: { type: integer }
+        duplicateCount: { type: integer }
+        invalidCount: { type: integer }
+        added:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: integer }
+              name: { type: string }
+              url: { type: string }
+              host: { type: string }
+            required: [id, name, url, host]
+        duplicates:
+          type: array
+          items:
+            type: object
+            properties:
+              line: { type: integer }
+              value: { type: string }
+              reason: { type: string }
+            required: [line, value, reason]
+        invalid:
+          type: array
+          items:
+            type: object
+            properties:
+              line: { type: integer }
+              value: { type: string }
+              reason: { type: string }
+            required: [line, value, reason]
+        monitoringPaused: { type: boolean }
+      required: [totalProcessed, addedCount, duplicateCount, invalidCount, added, duplicates, invalid, monitoringPaused]
+
+    CreateSiteBody:
+      type: object
+      properties:
+        name: { type: string }
+        url: { type: string }
+        region: { type: string, nullable: true }
+      required: [name, url]
+
+    UpdateSiteBody:
+      type: object
+      description: Partial update — all fields optional.
+      properties:
+        name: { type: string }
+        enabled: { type: boolean }
+        region: { type: string, nullable: true }
+        productCheckEnabled:
+          type: boolean
+          description: Toggle the optional product-page checker for this site.
+
+    SiteStatus:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        url: { type: string }
+        host: { type: string }
+        enabled: { type: boolean }
+        region: { type: string, nullable: true }
+        hasEverBeenUp: { type: boolean }
+        lastSuccessAt:
+          type: string
+          format: date-time
+          nullable: true
+        overallStatus:
+          $ref: "#/components/schemas/OverallStatus"
+        httpStatus:
+          type: integer
+          nullable: true
+        responseTimeMs:
+          type: number
+          nullable: true
+        dnsStatus:
+          type: string
+          nullable: true
+        dnsResolveMs:
+          type: number
+          nullable: true
+        resolvedIp:
+          type: string
+          nullable: true
+        resolverUsed:
+          type: string
+          nullable: true
+        sslStatus:
+          type: string
+          nullable: true
+        sslDaysRemaining:
+          type: integer
+          nullable: true
+        lastCheckedAt:
+          type: string
+          format: date-time
+          nullable: true
+        blockedReason:
+          type: string
+          nullable: true
+        consecutiveFailures:
+          type: integer
+        uptime24h:
+          type: number
+          description: Uptime percentage over the last 24 hours
+        openIncidentId:
+          type: integer
+          nullable: true
+      required:
+        - id
+        - name
+        - url
+        - host
+        - enabled
+        - region
+        - overallStatus
+        - consecutiveFailures
+        - uptime24h
+
+    CheckResult:
+      type: object
+      properties:
+        id: { type: integer }
+        siteId: { type: integer }
+        timestamp: { type: string, format: date-time }
+        overallStatus:
+          $ref: "#/components/schemas/OverallStatus"
+        httpStatus:
+          type: integer
+          nullable: true
+        responseTimeMs:
+          type: number
+          nullable: true
+        dnsStatus:
+          type: string
+          nullable: true
+        dnsResolveMs:
+          type: number
+          nullable: true
+        tcp80Open:
+          type: boolean
+          nullable: true
+        tcp443Open:
+          type: boolean
+          nullable: true
+        sslStatus:
+          type: string
+          nullable: true
+        sslDaysRemaining:
+          type: integer
+          nullable: true
+        sslIssuer:
+          type: string
+          nullable: true
+        errorType:
+          type: string
+          nullable: true
+        errorMessage:
+          type: string
+          nullable: true
+        blockedReason:
+          type: string
+          nullable: true
+        resolvedIp:
+          type: string
+          nullable: true
+        resolverUsed:
+          type: string
+          nullable: true
+      required: [id, siteId, timestamp, overallStatus]
+
+    UptimeStats:
+      type: object
+      properties:
+        siteId: { type: integer }
+        hours: { type: integer }
+        uptimePercent: { type: number }
+        totalChecks: { type: integer }
+        upChecks: { type: integer }
+        downChecks: { type: integer }
+        slowChecks: { type: integer }
+        avgResponseTimeMs:
+          type: number
+          nullable: true
+        p95ResponseTimeMs:
+          type: number
+          nullable: true
+      required:
+        - siteId
+        - hours
+        - uptimePercent
+        - totalChecks
+        - upChecks
+        - downChecks
+        - slowChecks
+
+    Incident:
+      type: object
+      properties:
+        id: { type: integer }
+        siteId: { type: integer }
+        siteName: { type: string }
+        siteUrl: { type: string }
+        incidentType:
+          $ref: "#/components/schemas/IncidentType"
+        severity:
+          $ref: "#/components/schemas/Severity"
+        status:
+          $ref: "#/components/schemas/IncidentStatus"
+        title: { type: string }
+        description:
+          type: string
+          nullable: true
+        startedAt: { type: string, format: date-time }
+        acknowledgedAt:
+          type: string
+          format: date-time
+          nullable: true
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        durationSeconds:
+          type: integer
+          nullable: true
+        failureCount: { type: integer }
+        updatedAt:
+          type: string
+          format: date-time
+        resolvedReason:
+          type: string
+          nullable: true
+        resolvedBy:
+          type: string
+          nullable: true
+          description: Who resolved the incident — e.g. "system" (auto), "operator" (manual).
+        resolvedFromCheckId:
+          type: integer
+          nullable: true
+          description: ID of the successful check that auto-resolved this incident, if applicable.
+      required:
+        - id
+        - siteId
+        - siteName
+        - siteUrl
+        - incidentType
+        - severity
+        - status
+        - title
+        - startedAt
+        - updatedAt
+        - failureCount
+
+    IncidentDetail:
+      allOf:
+        - $ref: "#/components/schemas/Incident"
+        - type: object
+          properties:
+            timeline:
+              type: array
+              items:
+                $ref: "#/components/schemas/CheckResult"
+
+    ResolveIncidentBody:
+      type: object
+      description: Optional body for manually resolving an incident.
+      properties:
+        resolvedReason:
+          type: string
+          description: Free-form note explaining why the operator resolved this incident.
+
+    AppSettings:
+      type: object
+      description: Operator-controlled application settings (k/v in app_settings table).
+      properties:
+        nextcloudAlertsEnabled: { type: boolean }
+        suppressResolvedAlerts: { type: boolean }
+        alertLanguage:
+          type: string
+          enum: [fa, en]
+        alertCooldownSec:
+          type: integer
+          minimum: 30
+          maximum: 86400
+        alertSeverities:
+          type: array
+          items:
+            type: string
+            enum: [info, warning, critical]
+        monitorIntervalMs:
+          type: integer
+          minimum: 30000
+        failureThreshold:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: Consecutive failed checks required to open an incident.
+        recoveryThreshold:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: Consecutive successful checks required to auto-resolve an incident.
+        requestTimeoutMs:
+          type: integer
+          minimum: 2000
+          maximum: 60000
+        slowResponseMs:
+          type: integer
+          minimum: 200
+          maximum: 30000
+        themeMode:
+          type: string
+          enum: [dark, light]
+        autoRefreshSec:
+          type: integer
+          minimum: 5
+          maximum: 600
+        dateFormat:
+          type: string
+          enum: [iso, relative, local]
+        defaultDashboardView:
+          type: string
+          enum: [list, grid]
+      required:
+        - nextcloudAlertsEnabled
+        - suppressResolvedAlerts
+        - alertLanguage
+        - alertCooldownSec
+        - alertSeverities
+        - monitorIntervalMs
+        - failureThreshold
+        - recoveryThreshold
+        - requestTimeoutMs
+        - slowResponseMs
+        - themeMode
+        - autoRefreshSec
+        - dateFormat
+        - defaultDashboardView
+
+    UpdateAppSettingsBody:
+      type: object
+      description: Partial update — supply only the fields you want to change.
+      properties:
+        nextcloudAlertsEnabled: { type: boolean }
+        suppressResolvedAlerts: { type: boolean }
+        alertLanguage:
+          type: string
+          enum: [fa, en]
+        alertCooldownSec: { type: integer, minimum: 30, maximum: 86400 }
+        alertSeverities:
+          type: array
+          items: { type: string, enum: [info, warning, critical] }
+        monitorIntervalMs:
+          type: integer
+          minimum: 30000
+        failureThreshold: { type: integer, minimum: 1, maximum: 10 }
+        recoveryThreshold: { type: integer, minimum: 1, maximum: 10 }
+        requestTimeoutMs: { type: integer, minimum: 2000, maximum: 60000 }
+        slowResponseMs: { type: integer, minimum: 200, maximum: 30000 }
+        themeMode:
+          type: string
+          enum: [dark, light]
+        autoRefreshSec: { type: integer, minimum: 5, maximum: 600 }
+        dateFormat:
+          type: string
+          enum: [iso, relative, local]
+        defaultDashboardView:
+          type: string
+          enum: [list, grid]
+
+    IncidentNote:
+      type: object
+      properties:
+        id: { type: integer }
+        incidentId: { type: integer }
+        note: { type: string }
+        author: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [id, incidentId, note, author, createdAt]
+
+    CreateIncidentNoteBody:
+      type: object
+      properties:
+        note: { type: string, minLength: 1 }
+        author: { type: string }
+      required: [note]
+
+    MonitorState:
+      type: object
+      properties:
+        paused: { type: boolean }
+        running: { type: boolean }
+        pausedAt: { type: string, format: date-time, nullable: true }
+        resumedAt: { type: string, format: date-time, nullable: true }
+        currentSiteId: { type: integer, nullable: true }
+        currentSiteName: { type: string, nullable: true }
+        currentStep: { type: string, nullable: true }
+        currentStartedAt: { type: string, format: date-time, nullable: true }
+        lastSweepStartedAt: { type: string, format: date-time, nullable: true }
+        lastSweepCompletedAt: { type: string, format: date-time, nullable: true }
+        lastSweepDurationMs: { type: integer, nullable: true }
+        lastSweepSiteCount: { type: integer, nullable: true }
+      required: [paused, running, pausedAt, resumedAt]
+
+    ConsoleEvent:
+      type: object
+      properties:
+        id: { type: integer }
+        ts: { type: string, format: date-time }
+        type:
+          type: string
+          enum: [cycle, site, dns, http, ssl, tcp, incident, alert, system]
+        level:
+          type: string
+          enum: [debug, info, warn, error]
+        siteId: { type: integer, nullable: true }
+        siteName: { type: string, nullable: true }
+        message: { type: string }
+        details:
+          type: object
+          additionalProperties: true
+          nullable: true
+      required: [id, ts, type, level, message]
+
+    ConsoleEventPage:
+      type: object
+      properties:
+        events:
+          type: array
+          items: { $ref: "#/components/schemas/ConsoleEvent" }
+        nextCursor: { type: integer }
+      required: [events, nextCursor]
+
+    ActivityEvent:
+      type: object
+      properties:
+        id: { type: string }
+        kind:
+          type: string
+          enum: [check, incident_opened, incident_acknowledged, incident_resolved]
+        siteId: { type: integer }
+        siteName: { type: string }
+        timestamp: { type: string, format: date-time }
+        message: { type: string }
+        severity:
+          $ref: "#/components/schemas/Severity"
+      required: [id, kind, siteId, siteName, timestamp, message, severity]
+
+    LatencyTrendPoint:
+      type: object
+      properties:
+        bucket: { type: string, format: date-time }
+        avgMs:
+          type: number
+          nullable: true
+        p95Ms:
+          type: number
+          nullable: true
+        upCount: { type: integer }
+        downCount: { type: integer }
+      required: [bucket, upCount, downCount]
+
+    CheckStatsTrendPoint:
+      type: object
+      properties:
+        bucket: { type: string, format: date-time }
+        upCount: { type: integer }
+        downCount: { type: integer }
+        slowCount: { type: integer }
+        dnsFailCount: { type: integer }
+        sslWarnCount: { type: integer }
+        totalCount: { type: integer }
+        avgMs:
+          type: number
+          nullable: true
+        errorRate: { type: number }
+        uptimePct: { type: number }
+      required: [bucket, upCount, downCount, slowCount, dnsFailCount, sslWarnCount, totalCount, errorRate, uptimePct]
+
+    IncidentTrendPoint:
+      type: object
+      properties:
+        bucket: { type: string, format: date-time }
+        createdCount: { type: integer }
+        resolvedCount: { type: integer }
+      required: [bucket, createdCount, resolvedCount]
+
+    UnstableSite:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        host: { type: string }
+        failCount: { type: integer }
+        totalCount: { type: integer }
+        failRate: { type: number }
+      required: [id, name, host, failCount, totalCount, failRate]
+
+    DashboardSummary:
+      type: object
+      properties:
+        totalSites: { type: integer }
+        upCount: { type: integer }
+        downCount: { type: integer }
+        slowCount: { type: integer }
+        degradedCount: { type: integer }
+        openIncidents: { type: integer }
+        criticalIncidents: { type: integer }
+        avgResponseTimeMs:
+          type: number
+          nullable: true
+        avgUptime24h: { type: number }
+        sslExpiringSoon:
+          type: array
+          items:
+            type: object
+            properties:
+              siteId: { type: integer }
+              name: { type: string }
+              host: { type: string }
+              daysRemaining: { type: integer }
+            required: [siteId, name, host, daysRemaining]
+        lastUpdatedAt: { type: string, format: date-time }
+      required:
+        - totalSites
+        - upCount
+        - downCount
+        - slowCount
+        - degradedCount
+        - openIncidents
+        - criticalIncidents
+        - avgUptime24h
+        - sslExpiringSoon
+        - lastUpdatedAt
+
+    DnsCheckBody:
+      type: object
+      properties:
+        host: { type: string }
+      required: [host]
+
+    DnsResolverResult:
+      type: object
+      properties:
+        resolver: { type: string }
+        ok: { type: boolean }
+        responseTimeMs:
+          type: number
+          nullable: true
+        addresses:
+          type: array
+          items: { type: string }
+        error:
+          type: string
+          nullable: true
+      required: [resolver, ok, addresses]
+
+    DnsHealthReport:
+      type: object
+      properties:
+        host: { type: string }
+        healthScore: { type: number }
+        status:
+          type: string
+          enum: [healthy, degraded, failed]
+        propagationConsistent: { type: boolean }
+        avgResponseTimeMs:
+          type: number
+          nullable: true
+        resolvers:
+          type: array
+          items:
+            $ref: "#/components/schemas/DnsResolverResult"
+      required: [host, healthScore, status, propagationConsistent, resolvers]
+
+    LogEntry:
+      type: object
+      properties:
+        id: { type: integer }
+        timestamp: { type: string, format: date-time }
+        level: { type: string, enum: [debug, info, warn, error] }
+        category: { type: string, enum: [system, monitor, incident, api, dns] }
+        siteId: { type: integer, nullable: true }
+        message: { type: string }
+        details: { type: string, nullable: true }
+      required: [id, timestamp, level, category, siteId, message, details]
+
+    DnsResolverEntry:
+      type: object
+      properties:
+        id: { type: integer, nullable: true, description: "null for built-in resolvers" }
+        name: { type: string }
+        address: { type: string }
+        builtIn: { type: boolean }
+      required: [id, name, address, builtIn]
+
+    DnsResolverList:
+      type: object
+      properties:
+        builtIn:
+          type: array
+          items: { $ref: "#/components/schemas/DnsResolverEntry" }
+        custom:
+          type: array
+          items: { $ref: "#/components/schemas/DnsResolverEntry" }
+      required: [builtIn, custom]
+
+    AddDnsResolversBody:
+      type: object
+      properties:
+        text:
+          type: string
+          description: Bulk text — one IP per line or comma separated. Optional "name=ip" format supported.
+      required: [text]
+
+    AddDnsResolversResult:
+      type: object
+      properties:
+        added:
+          type: array
+          items: { $ref: "#/components/schemas/DnsResolverEntry" }
+        skipped:
+          type: array
+          items:
+            type: object
+            properties:
+              value: { type: string }
+              reason: { type: string }
+            required: [value, reason]
+      required: [added, skipped]
+
+    DnsRecordResult:
+      type: object
+      properties:
+        type: { type: string, enum: [A, AAAA, CNAME] }
+        records:
+          type: array
+          items: { type: string }
+        code:
+          type: string
+          enum: [OK, NXDOMAIN, SERVFAIL, TIMEOUT, NO_RECORD, REFUSED, ERROR]
+        errorMessage: { type: string, nullable: true }
+        responseTimeMs: { type: number }
+      required: [type, records, code, errorMessage, responseTimeMs]
+
+    CnameChainHop:
+      type: object
+      properties:
+        hop: { type: integer }
+        from: { type: string }
+        cname: { type: string, nullable: true }
+        resolvedA:
+          type: array
+          items: { type: string }
+        code:
+          type: string
+          enum: [OK, NXDOMAIN, SERVFAIL, TIMEOUT, NO_RECORD, REFUSED, ERROR]
+        errorMessage: { type: string, nullable: true }
+      required: [hop, from, cname, resolvedA, code, errorMessage]
+
+    CnameChainResult:
+      type: object
+      properties:
+        startHost: { type: string }
+        chain:
+          type: array
+          items: { $ref: "#/components/schemas/CnameChainHop" }
+        finalTarget: { type: string }
+        truncated: { type: boolean }
+        loop: { type: boolean }
+      required: [startHost, chain, finalTarget, truncated, loop]
+
+    AdvancedDnsReport:
+      type: object
+      properties:
+        host: { type: string }
+        resolver: { type: string }
+        a: { $ref: "#/components/schemas/DnsRecordResult" }
+        aaaa: { $ref: "#/components/schemas/DnsRecordResult" }
+        cname: { $ref: "#/components/schemas/DnsRecordResult" }
+        cnameChain: { $ref: "#/components/schemas/CnameChainResult" }
+        systemLookup:
+          type: object
+          properties:
+            address: { type: string, nullable: true }
+            family: { type: integer, nullable: true }
+            code:
+              type: string
+              enum: [OK, NXDOMAIN, SERVFAIL, TIMEOUT, NO_RECORD, REFUSED, ERROR]
+            errorMessage: { type: string, nullable: true }
+            responseTimeMs: { type: number }
+          required: [address, family, code, errorMessage, responseTimeMs]
+        generatedAt: { type: string, format: date-time }
+      required: [host, resolver, a, aaaa, cname, cnameChain, systemLookup, generatedAt]
+
+    HttpDiagnosticHop:
+      type: object
+      properties:
+        hop: { type: integer }
+        url: { type: string }
+        method: { type: string }
+        status: { type: integer, nullable: true }
+        statusText: { type: string, nullable: true }
+        responseTimeMs: { type: number }
+        headers:
+          type: object
+          additionalProperties: { type: string }
+        redirectedTo: { type: string, nullable: true }
+        errorType: { type: string, nullable: true }
+        errorMessage: { type: string, nullable: true }
+      required: [hop, url, method, status, statusText, responseTimeMs, headers, redirectedTo, errorType, errorMessage]
+
+    HttpDiagnosticReport:
+      type: object
+      properties:
+        url: { type: string }
+        finalUrl: { type: string }
+        totalTimeMs: { type: number }
+        reachedFinal: { type: boolean }
+        hops:
+          type: array
+          items: { $ref: "#/components/schemas/HttpDiagnosticHop" }
+        curlText: { type: string }
+        generatedAt: { type: string, format: date-time }
+      required: [url, finalUrl, totalTimeMs, reachedFinal, hops, curlText, generatedAt]
+
+    ProductCheckResult:
+      type: object
+      description: |
+        Optional ecommerce diagnostic. Discovers /product, /category, /shop etc.
+        links from the homepage (or sitemap fallback), samples 3-5 of them, and
+        reports whether any responded with 200/301/302. NEVER affects site status.
+      properties:
+        enabled: { type: boolean }
+        url: { type: string }
+        status:
+          type: string
+          enum: [ok, warning, failed, unknown, error, skipped]
+        productPagesFound: { type: boolean }
+        source:
+          type: string
+          enum: [homepage, sitemap, none]
+        checkedUrls:
+          type: array
+          items: { type: string }
+        workingUrls:
+          type: array
+          items: { type: string }
+        message: { type: string }
+        responseTimeMs: { type: number }
+        errorMessage: { type: string, nullable: true }
+        generatedAt: { type: string, format: date-time }
+      required:
+        - enabled
+        - url
+        - status
+        - productPagesFound
+        - source
+        - checkedUrls
+        - workingUrls
+        - message
+        - responseTimeMs
+        - errorMessage
+        - generatedAt
+
+    CurlCheckResult:
+      type: object
+      description: |
+        Lightweight curl-style HTTP probe. Diagnostic only — never affects status.
+      properties:
+        url: { type: string }
+        finalUrl: { type: string }
+        statusCode: { type: integer, nullable: true }
+        statusGroup:
+          type: string
+          enum: ["1xx", "2xx", "3xx", "4xx", "5xx", "none"]
+        responseTimeMs: { type: number }
+        redirectCount: { type: integer }
+        contentType: { type: string, nullable: true }
+        server: { type: string, nullable: true }
+        ok: { type: boolean }
+        errorMessage: { type: string, nullable: true }
+        generatedAt: { type: string, format: date-time }
+      required:
+        - url
+        - finalUrl
+        - statusCode
+        - statusGroup
+        - responseTimeMs
+        - redirectCount
+        - contentType
+        - server
+        - ok
+        - errorMessage
+        - generatedAt
+
+    BulkDeleteSitesBody:
+      type: object
+      properties:
+        ids:
+          type: array
+          items: { type: integer }
+          minItems: 1
+      required: [ids]
+
+    BulkDeleteSitesResult:
+      type: object
+      properties:
+        requested: { type: integer }
+        deleted: { type: integer }
+        deletedIds:
+          type: array
+          items: { type: integer }
+      required: [requested, deleted, deletedIds]
+
+    RunCheckAllResult:
+      type: object
+      properties:
+        queued: { type: boolean }
+        siteCount: { type: integer }
+        message: { type: string }
+      required: [queued, siteCount, message]
+
+    MonitoringStoppedError:
+      type: object
+      properties:
+        error:
+          type: string
+          enum: [monitoring_stopped]
+        message: { type: string }
+      required: [error, message]
+
+    MonitoringQueueItem:
+      type: object
+      properties:
+        siteId: { type: integer }
+        siteName: { type: string }
+        host: { type: string }
+        url: { type: string }
+        position: { type: integer }
+        state:
+          type: string
+          enum: [waiting, checking, completed, failed, skipped, cancelled]
+        source:
+          type: string
+          enum: [auto, manual, bulk-import]
+          default: auto
+        enqueuedAt: { type: string, format: date-time }
+        startedAt: { type: string, format: date-time, nullable: true }
+        finishedAt: { type: string, format: date-time, nullable: true }
+        errorMessage: { type: string, nullable: true }
+      required:
+        [siteId, siteName, host, url, position, state, source, enqueuedAt, startedAt, finishedAt, errorMessage]
+
+    MonitoringNextCycleItem:
+      type: object
+      properties:
+        siteId: { type: integer }
+        siteName: { type: string }
+        host: { type: string }
+        url: { type: string }
+      required: [siteId, siteName, host, url]
+
+    MonitoringQueueSnapshot:
+      type: object
+      properties:
+        label: { type: string, nullable: true }
+        startedAt: { type: string, format: date-time, nullable: true }
+        completedAt: { type: string, format: date-time, nullable: true }
+        isCompleted: { type: boolean }
+        totalCount: { type: integer }
+        waitingCount: { type: integer }
+        checkingCount: { type: integer }
+        completedCount: { type: integer }
+        failedCount: { type: integer }
+        skippedCount: { type: integer }
+        cancelledCount: { type: integer }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/MonitoringQueueItem" }
+        nextCycleItems:
+          type: array
+          items: { $ref: "#/components/schemas/MonitoringNextCycleItem" }
+      required:
+        [label, startedAt, completedAt, isCompleted, totalCount, waitingCount, checkingCount,
+         completedCount, failedCount, skippedCount, cancelledCount, items, nextCycleItems]
+
+    DiagnosticsReport:
+      type: object
+      properties:
+        siteId: { type: integer }
+        host: { type: string }
+        url: { type: string }
+        generatedAt: { type: string, format: date-time }
+        dns: { $ref: "#/components/schemas/AdvancedDnsReport" }
+        http: { $ref: "#/components/schemas/HttpDiagnosticReport" }
+        ssl:
+          type: object
+          properties:
+            status: { type: string }
+            daysRemaining: { type: integer, nullable: true }
+            issuer: { type: string, nullable: true }
+            error: { type: string, nullable: true }
+          required: [status, daysRemaining, issuer, error]
+        productCheck:
+          allOf:
+            - { $ref: "#/components/schemas/ProductCheckResult" }
+          nullable: true
+        productCheckEnabled: { type: boolean }
+        productCheckRanAt: { type: string, format: date-time, nullable: true }
+        latestCurlDiagnostic:
+          allOf:
+            - { $ref: "#/components/schemas/CurlCheckResult" }
+          nullable: true
+        latestCurlDiagnosticAt:
+          type: string
+          format: date-time
+          nullable: true
+      required: [siteId, host, url, generatedAt, dns, http, ssl, productCheckEnabled]
+
+    NextcloudTalkStatus:
+      type: object
+      properties:
+        configured: { type: boolean }
+        hasUrl: { type: boolean }
+        hasUser: { type: boolean }
+        hasPassword: { type: boolean }
+        roomCount: { type: integer }
+        lastAlertAt: { type: string, format: date-time, nullable: true }
+        lastAlertType: { type: string, nullable: true }
+        lastAlertSuccess: { type: boolean, nullable: true }
+        lastAlertError: { type: string, nullable: true }
+      required: [configured, hasUrl, hasUser, hasPassword, roomCount]
+
+    TestNextcloudTalkResult:
+      type: object
+      properties:
+        ok: { type: boolean }
+        sent: { type: boolean }
+        reason: { type: string, nullable: true }
+        sentAt: { type: string, format: date-time, nullable: true }
+      required: [ok, sent]

@@ -1,0 +1,224 @@
+Please also review and implement the following UI/UX and behavior improvements. Do not blindly implement—first analyze the current code and apply the best clean solution based on existing architecture.
+
+---
+
+### 1. Add Fullscreen mode
+
+- Add a fullscreen toggle button in the UI (top bar/header).
+- When clicked:
+  - The app should enter browser fullscreen mode.
+  - Clicking again should exit fullscreen.
+- The icon should clearly indicate enter/exit state.
+- Must work smoothly and not break layout.
+
+---
+
+### 2. Improve Theme (Light/Dark Mode)
+
+Requirements:
+
+- Default theme should be:
+  Light Mode
+
+- Dark mode should be:
+  manually enabled by user
+
+Add quick toggle:
+- In the main UI (top section), near language switcher
+- So user can quickly switch theme without going into settings
+
+Also:
+- Keep theme setting in Settings page as well
+- Sync both (header toggle + settings)
+
+Behavior:
+- Persist theme (localStorage or settings)
+- Apply instantly without reload
+
+---
+
+### 3. Move Recent Activities into Dashboard (beside Monitoring Queue)
+
+Current issue:
+Recent Activities is separated and not well positioned.
+
+Fix:
+
+- Move Recent Activities into Dashboard
+- Place it next to Monitoring Queue
+
+Layout:
+- Monitoring Queue → left side (smaller)
+- Recent Activities → right side (same height)
+
+Position:
+- Both should appear below Monitored Sites section
+
+Requirements:
+- Monitoring Queue width reduced
+- Recent Activities takes remaining space
+- Both visually aligned
+- Recent Activities should be scrollable
+- Keep clean card layout
+
+---
+
+### 4. Fix Monitoring Queue system (critical)
+
+Current system has logical issues.
+
+Fix behavior to act like a real queue (playlist-style system):
+
+Problems:
+- Sometimes system is checking a site but queue is empty ❌
+- Queue disappears after finishing ❌
+- Next queue is not visible ❌
+
+Expected behavior:
+
+A) Always reflect real engine state
+- If system is checking → it MUST appear in queue
+
+B) Queue must always exist visually
+- Never show empty state between cycles
+
+C) Show current + next queue
+- Current queue → active items
+- Next queue → upcoming cycle (pre-built)
+
+D) Playlist-like behavior
+- Like a music playlist queue
+- Items flow continuously
+
+E) Countdown + next queue
+- Still show:
+  “Next cycle in: X min”
+- BUT also show the next queue list
+
+F) Right-click interaction
+- Add option:
+  “Add to queue”
+- User can manually push sites into queue
+
+G) Scrollable queue
+- If large → scroll instead of expanding layout
+
+H) Smooth animations
+- Add/remove items smoothly
+- No jumpy UI
+
+I) Queue item states:
+- waiting
+- checking
+- done
+- skipped
+
+---
+
+### 5. Fix Pause / Resume Monitoring behavior
+
+Current bug:
+Monitoring continues even after pause ❌
+
+Fix:
+
+- When user clicks "Pause Monitoring":
+  - ALL operations must stop immediately
+  - Including:
+    - auto monitoring
+    - manual "Run Check All"
+    - queued checks
+
+- If something is already running:
+  - stop it safely (abort if possible)
+
+- When paused:
+  - disable run check buttons OR show warning
+
+- Resume:
+  - system continues normally
+
+This must be enforced BOTH:
+- frontend
+- backend (important)
+
+---
+
+### 6. Add Delete option to Grid view (right-click)
+
+Current issue:
+- In Grid view → right-click only supports "Add to queue"
+- Delete is missing
+
+Fix:
+
+- Add Delete option to right-click menu in Grid view
+- Same behavior as List view
+
+Requirements:
+- Confirmation dialog before delete
+- Keep consistency between List and Grid
+- Do not expose dangerous action without confirmation
+
+---
+
+### 7. Update Footer Developer Credit
+
+Change footer text to:
+
+Powered by Unixee • Developed by Behnia Masoumi
+
+Requirements:
+- Keep copyright icon/style
+- Keep existing footer design
+- Just update wording
+
+---
+
+### 8. Fix "Default Dashboard View" setting
+
+Current issue:
+- Not clear what it does
+- Seems non-functional
+
+Fix:
+
+- Make it actually functional and meaningful
+
+Possible correct behavior:
+- Control which page/tab opens by default:
+  - Dashboard
+  - Charts & Status
+  - Incidents
+  - Live Console
+
+OR
+- Control default monitored sites view:
+  - List
+  - Grid
+
+Choose the most logical behavior based on current implementation.
+
+Requirements:
+- Rename label if unclear
+- Add description/help text
+- Ensure it visibly affects UI
+- Persist selection
+- Add proper Persian translation
+
+---
+
+### Final note
+
+- Do not break existing features
+- Keep UI clean and operator-friendly
+- Prefer minimal but correct changes
+- Fix logic issues, not just visuals
+- Maintain consistency across List / Grid / Dashboard
+
+After implementation, explain:
+- What was changed
+- How queue logic now works
+- How pause/resume is enforced
+- How theme toggle works
+- How default dashboard view works

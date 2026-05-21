@@ -1,0 +1,362 @@
+Please design and implement a proper user authentication and user panel system for this existing Hosting Manager / NOC Monitoring project.
+
+Important:
+- Do not rewrite the whole app.
+- Keep the current architecture.
+- Add authentication and user management cleanly into the existing backend/frontend/database structure.
+- Use secure and production-friendly practices.
+- Do not hardcode passwords.
+- Do not expose secrets to frontend.
+
+Project context:
+- Hosting / NOC Monitoring Dashboard
+- Backend: Express + TypeScript
+- Frontend: React + Vite
+- Database: PostgreSQL + Drizzle
+- Existing app has dashboard, monitored sites, incidents, queue, logs, settings, charts, and operators will use it.
+
+Goal:
+When a user opens the website for the first time, they should be required to log in with username/email and password before accessing the NOC dashboard.
+
+Add a complete but simple user system.
+
+Required features:
+
+1. Login system
+
+Add a login page.
+
+Fields:
+- Email or username
+- Password
+
+Behavior:
+- If user is not logged in, redirect to login page.
+- After successful login, redirect to dashboard.
+- If login fails, show a clear error message.
+- Add loading state while logging in.
+- Password field should be hidden by default with optional show/hide button.
+
+Security:
+- Passwords must be hashed in database.
+- Never store plain text passwords.
+- Use secure password hashing such as bcrypt or argon2.
+- Use session cookie or JWT safely.
+- Prefer httpOnly cookie if practical.
+- Add logout support.
+
+2. First admin user setup
+
+Since this project may not have users yet, add a first-time setup flow.
+
+Behavior:
+- If no users exist in database:
+  - show “Create Admin Account” page
+  - ask for:
+    - first name
+    - last name
+    - email
+    - username
+    - password
+    - confirm password
+  - create the first admin user
+- After first admin is created, disable public registration unless enabled by admin.
+
+This prevents being locked out after deployment.
+
+3. User profile fields
+
+Each user should have:
+- id
+- firstName
+- lastName
+- displayName
+- email
+- username
+- passwordHash
+- role
+- status
+- createdAt
+- updatedAt
+- lastLoginAt
+
+Roles:
+- admin
+- operator
+- viewer
+
+Status:
+- active
+- disabled
+
+4. Show logged-in user in UI
+
+In the top-right corner of the app, show the logged-in user identity.
+
+Example:
+Behnia Masoumi
+Admin
+
+Or in Persian:
+بهنیا معصومی
+مدیر
+
+Add a user menu/dropdown with:
+- Profile
+- Settings
+- Logout
+
+If avatar is easy:
+- Show initials avatar, for example:
+  BM
+
+5. User profile page
+
+Add a simple profile page.
+
+User can view:
+- first name
+- last name
+- display name
+- email
+- username
+- role
+- last login
+
+User can edit:
+- first name
+- last name
+- display name
+
+Optional:
+- Change password section
+
+Password change:
+- current password
+- new password
+- confirm new password
+
+6. Admin user management panel
+
+Add a Users / Operators management page for admins.
+
+Admin can:
+- View users
+- Create new user
+- Edit user
+- Disable/enable user
+- Change user role
+- Reset password or set temporary password
+
+Do not allow deleting the last admin.
+
+Roles behavior:
+Admin:
+- Full access
+- Manage users
+- Manage settings
+- Delete sites
+- Clear history
+- Run checks
+- Pause/resume monitoring
+
+Operator:
+- Use dashboard
+- Run checks
+- Manage incidents
+- View logs
+- Add to queue
+- Generate reports
+- Cannot manage users
+- Cannot change global dangerous settings unless allowed
+
+Viewer:
+- Read-only access
+- Can view dashboard, charts, incidents, logs
+- Cannot run checks
+- Cannot delete
+- Cannot pause monitoring
+- Cannot change settings
+
+7. Permission system
+
+Add backend permission checks.
+
+Important:
+- Do not rely only on frontend hiding buttons.
+- Backend APIs must enforce permissions too.
+
+Examples:
+- Only admin can manage users.
+- Only admin/operator can run checks.
+- Only admin/operator can resolve incidents.
+- Only admin can delete monitored sites or clear history.
+- Viewer cannot perform write actions.
+
+Frontend:
+- Hide or disable buttons based on role.
+- Show clear message if user has no permission.
+
+8. Authentication API
+
+Add endpoints such as:
+
+POST /api/auth/login
+POST /api/auth/logout
+GET /api/auth/me
+POST /api/auth/setup-admin
+POST /api/auth/change-password
+
+Admin user management:
+GET /api/users
+POST /api/users
+PATCH /api/users/:id
+PATCH /api/users/:id/status
+PATCH /api/users/:id/role
+POST /api/users/:id/reset-password
+
+Use existing API style.
+If OpenAPI exists:
+- Update openapi.yaml.
+- Regenerate typed client if required.
+
+9. Route protection
+
+Protect frontend routes:
+- Dashboard
+- Charts & Status
+- Incidents
+- Logs
+- Live Console
+- Settings
+- DNS Resolvers
+- Site detail pages
+
+Unauthenticated users should only access:
+- Login page
+- First admin setup page if no users exist
+
+10. Audit logs
+
+Add audit logging for important user actions if possible.
+
+Log:
+- login
+- logout
+- failed login
+- user created
+- role changed
+- user disabled/enabled
+- password changed
+- site deleted
+- monitoring paused/resumed
+- run check all
+- incident resolved
+
+This is useful for NOC accountability.
+
+11. UI/UX
+
+Login page:
+- Clean and professional
+- Matches current NOC Monitor style
+- Light mode default
+- Dark mode compatible if theme exists
+- Persian/English localization support
+
+Top bar:
+- Show current user
+- Role badge
+- Logout menu
+
+Users page:
+- Clean table
+- Role badges
+- Status badges
+- Search/filter if easy
+
+12. Localization
+
+Add Persian and English translations for all new UI text.
+
+Examples:
+Login → ورود
+Logout → خروج
+Username → نام کاربری
+Password → رمز عبور
+Email → ایمیل
+First Name → نام
+Last Name → نام خانوادگی
+Role → نقش
+Admin → مدیر
+Operator → اپراتور
+Viewer → مشاهده‌گر
+Profile → پروفایل
+Users → کاربران
+Create Admin Account → ساخت حساب مدیر
+Change Password → تغییر رمز عبور
+Access denied → دسترسی غیرمجاز
+
+Do not show raw translation keys.
+
+13. Security requirements
+
+- Hash passwords.
+- Validate inputs.
+- Protect against empty/weak passwords.
+- Add minimum password length, recommended 8 characters.
+- Do not leak whether email exists in failed login if possible.
+- Use secure cookies or safe token storage.
+- Add session expiration if practical.
+- Make logout invalidate the session/token.
+- Never log passwords.
+
+14. Database
+
+Use existing Drizzle style.
+
+Add users table if not present.
+Add sessions table if using database sessions.
+
+Suggested tables:
+users:
+- id
+- firstName
+- lastName
+- displayName
+- email
+- username
+- passwordHash
+- role
+- status
+- lastLoginAt
+- createdAt
+- updatedAt
+
+sessions if needed:
+- id
+- userId
+- tokenHash
+- expiresAt
+- createdAt
+
+15. Quality requirements
+
+- Keep TypeScript clean.
+- Keep code modular.
+- Do not break existing monitoring.
+- Do not remove existing features.
+- Add error handling.
+- Keep UI responsive.
+- Use existing component/design system.
+- Keep permissions consistent between frontend and backend.
+
+After implementation, explain:
+1. What files were changed.
+2. What database tables/fields were added.
+3. How first admin setup works.
+4. How login/logout works.
+5. How roles and permissions work.
+6. How to create new users.
+7. How to test the auth system.
+8. Any required environment variables.

@@ -1,0 +1,553 @@
+I want to implement a set of professional operator/user-management, audit, site monitoring control, DNS testing, and monitored-sites UX improvements in my existing Hosting Manager / NOC Monitoring project.
+
+Please inspect the current codebase first:
+- auth/session system
+- users/roles
+- audit log implementation
+- monitored sites list/grid
+- queue system
+- DNS resolver test logic
+- settings
+- API routes
+- database schema
+- i18n/localization
+
+Do not rewrite the whole project.
+Keep the existing architecture and design system.
+Fix and extend the current implementation cleanly.
+If you find a better or more professional approach than my exact wording, use your judgment and implement the best practical solution.
+
+Project context:
+- Backend: Express + TypeScript
+- Frontend: React + Vite
+- Database: PostgreSQL + Drizzle
+- App type: Hosting / NOC Monitoring Dashboard
+- Roles: founder/admin/operator/viewer or similar
+- Existing features: auth, users, monitored sites, queue, DNS resolvers/performance, audit log, incidents, settings
+
+---
+
+## 1. User presence status: online / offline / away / busy / in work shift
+
+Add a proper user presence system.
+
+Goal:
+The app should show whether users are currently online, offline, away, busy, or in work shift.
+
+### UI requirements
+
+In the top-right user area:
+- Show the logged-in user's name
+- Show role badge
+- Show a small presence indicator/emote next to the name
+
+Examples:
+- 🟢 Online
+- ⚪ Offline
+- 🟡 Away
+- 🔴 Busy
+- 🟣 In Work Shift
+
+The exact icons/colors can be improved based on the existing UI design.
+
+In the Users page:
+- Add a presence/status column next to the Role column
+- Show each user's current status:
+  - Online
+  - Offline
+  - Away
+  - Busy
+  - In Work Shift
+- Show last seen time when offline
+
+Example:
+Behnia Masoumi | Admin | 🟢 Online
+Operator One | Operator | ⚪ Offline — last seen 12 minutes ago
+
+### Presence logic
+
+Implement a reliable heartbeat mechanism.
+
+Recommended behavior:
+- Frontend sends heartbeat every 30 seconds while app is open and user is authenticated
+- Backend stores lastSeenAt / lastHeartbeatAt
+- If no heartbeat for 2 minutes → user becomes Offline automatically
+- If user is inactive but still connected, optionally mark as Away after a configurable idle period
+- User can manually choose:
+  - Online
+  - Away
+  - Busy
+  - In Work Shift
+
+### Auto logout logic
+
+If a user has been offline for 30 minutes:
+- Invalidate/revoke their session
+- Next time the browser checks auth, redirect to login
+- Do this safely server-side, not only in frontend
+
+### Database fields
+
+Add fields if needed:
+users:
+- presenceStatus
+- workStatus
+- lastSeenAt
+- lastActivityAt
+- lastStatusChangedAt
+
+sessions:
+- lastSeenAt
+- expiresAt
+- revokedAt
+
+Use the existing auth/session structure if already available.
+
+---
+
+## 2. Work shift status
+
+Add a work-shift style status next to the normal presence status.
+
+Goal:
+Operators/admins should be able to mark whether they are actively on shift or not.
+
+Suggested options:
+- In Work Shift
+- Off Shift
+- Break
+- Busy
+- Available
+
+This can be implemented as:
+- a separate field: workStatus
+or
+- part of presenceStatus, if simpler
+
+UI:
+- Add this selector in the user menu/dropdown
+- Also show it in the Users page
+- Add Persian/English translations
+
+Audit:
+- Log changes to work shift status in Audit Log
+
+---
+
+## 3. Login critical summary popup for operators/admins
+
+When a user with a role other than Viewer logs in, show a popup/modal with important recent events from the last 1 hour.
+
+Purpose:
+Operators logging in should immediately understand what happened recently.
+
+Show only important events, such as:
+- Critical incidents
+- Site down events
+- Critical DNS failures
+- Critical SSL issues
+- Major monitoring/system issues
+- High-severity audit events if relevant
+
+Requirements:
+- Show this popup only for founder/admin/operator roles
+- Do not show it for viewer
+- Time window: last 1 hour
+- Show concise summary cards/list
+- Include timestamp, site name, severity, and short description
+- Add action buttons:
+  - View Incident
+  - View Site
+  - Dismiss
+- Do not block the user forever
+- Allow reopening from Notifications / Help / Recent Critical Events if practical
+
+Example:
+“3 critical events occurred in the last hour”
+- digikala.com — DOWN — DNS timeout — 24 minutes ago
+- example.com — SSL critical — expires in 1 day — 40 minutes ago
+
+Add Persian/English translations.
+
+---
+
+## 4. Improve Audit Log coverage
+
+The Audit Log currently does not record many important user actions.
+
+Please review all important mutation routes and add audit logging consistently.
+
+Audit these actions:
+- user login
+- user logout
+- failed login
+- user status changed: online/offline/away/busy/work shift
+- user created
+- user updated
+- user disabled/enabled
+- role changed
+- site created
+- site updated
+- site deleted
+- site paused
+- site resumed
+- bulk import
+- incident acknowledged
+- incident resolved
+- DNS resolver added
+- DNS resolver edited
+- DNS resolver deleted
+- manual resolver test
+- settings changed
+- notification settings changed
+- monitored site view/layout changed if stored server-side
+- destructive actions such as clear history
+
+Important:
+Do not log secrets or passwords.
+Do not log raw tokens.
+For settings changes, hide secret values.
+
+Create or improve a reusable audit logging service/helper so every important route can call it easily.
+
+---
+
+## 5. Improve Audit Log resource display
+
+Current issue:
+For site-related logs, the resource sometimes appears as something like:
+#siteNumber
+
+This is not useful enough.
+
+Expected behavior:
+If the audit log is related to a site, show both:
+- site ID
+- site name
+
+Example:
+Instead of:
+#24
+
+Show:
+#24 — Digikala
+or
+Site #24 — Digikala
+
+If the resource is a user:
+User #5 — Behnia Masoumi
+
+If the resource is a DNS resolver:
+Resolver #3 — Cloudflare 1.1.1.1
+
+Store entityName/resourceName at the time of logging so logs remain readable even if the entity is later renamed or deleted.
+
+Suggested audit fields:
+- entityType
+- entityId
+- entityName
+- resourceLabel
+- actionType
+- actorUserId
+- actorName
+- actorRole
+- description
+- severity
+- createdAt
+- metadata
+
+---
+
+## 6. Add site filter to Audit Log
+
+Add a filter in Audit Log to view actions related to a specific monitored site.
+
+Requirements:
+- Add a dropdown/select listing all monitored sites
+- Selecting a site filters audit logs to only actions related to that site
+- Include site ID + site name in the dropdown
+- Support “All sites”
+- Combine correctly with existing filters:
+  - date range
+  - user
+  - action type
+  - severity
+  - search
+
+Backend:
+- Add query parameter if needed:
+  GET /api/audit-logs?siteId=24
+
+Frontend:
+- Add clean UI filter
+- Add loading/empty states
+
+---
+
+## 7. Add text export to Audit Log
+
+Add a text export feature to Audit Log.
+
+Requirements:
+- User can export the currently filtered audit log result as plain text
+- The export should respect active filters
+- Add button:
+  Export TXT
+or
+  Download Text Report
+
+TXT content should include:
+- Export timestamp
+- Applied filters
+- Audit log entries
+- Actor
+- Action
+- Resource
+- Severity
+- Timestamp
+- Description
+
+Optional:
+- Also add Copy as text if easy
+
+Permissions:
+- Only users allowed to view Audit Log can export it
+
+---
+
+## 8. Manual resolver test: optional additional DNS input
+
+In the Manual Resolver Test section, add an optional field:
+
+Additional DNS Resolver
+
+Purpose:
+The operator should be able to quickly test a DNS resolver that is not saved in the resolver list.
+
+Behavior:
+- User enters an IP/address, for example:
+  8.8.8.8
+  1.1.1.1
+- System runs the resolver test using this temporary DNS
+- Do not save it automatically
+- Show results clearly:
+  - success/failure
+  - latency
+  - error
+  - tested domain/site
+  - resolver used
+
+Optional:
+- Add “Save this resolver” button after successful test
+
+Validation:
+- Validate DNS resolver IP/address
+- Show helpful error if invalid
+
+Audit:
+- Audit manual resolver tests, including temporary resolver address if not sensitive
+
+Localization:
+- Additional DNS Resolver → DNS اضافه برای تست
+- Test with additional DNS → تست با DNS اضافه
+
+---
+
+## 9. Add per-site Pause / Resume monitoring
+
+Add the ability to pause monitoring for a specific site.
+
+Important distinction:
+This is different from global monitoring pause.
+
+### Behavior
+
+If a site is paused:
+- It should be excluded from automatic monitoring sweeps
+- It should not appear in automatic queue
+- It should not create automatic incidents while paused
+- It should not affect global monitoring
+- Manual checks should still be allowed from the site detail page
+- It should still be possible to manually add it to the queue
+- If manually added to queue, the queue should process it as a manual check
+- It remains excluded from automatic monitoring until resumed
+
+### UI requirements
+
+Add site pause/resume action in:
+- Monitored Sites list right-click menu
+- Monitored Sites grid right-click menu
+- Bulk selection actions in List View
+- Bulk selection actions in Grid View if multi-select exists
+- Site detail page action button if appropriate
+
+Show paused state clearly in both list and grid:
+- Add “Paused” badge near site name
+- Use a subtle glass/transparent overlay style
+- Keep it readable in both light and dark mode
+- In grid view, paused cards should visually feel inactive but still clickable
+- In list view, paused rows should be visually distinct
+
+Suggested style:
+- translucent glass overlay
+- muted text
+- paused badge
+- no aggressive red color, because paused is intentional
+
+### Backend requirements
+
+Add field if needed:
+sites:
+- monitoringPaused: boolean
+- monitoringPausedAt
+- monitoringPausedBy
+
+Monitoring engine:
+- Automatic sweeps must skip paused sites
+- Automatic queue must not include paused sites
+- Manual check endpoint should still allow checking paused site
+- Manual add-to-queue should still allow paused site if explicitly user-triggered
+
+Audit:
+- Log site paused/resumed
+- Include site ID and site name
+
+Permissions:
+- founder/admin/operator can pause/resume sites
+- viewer cannot
+
+---
+
+## 10. Add fullscreen mode for Monitored Sites section
+
+Add a fullscreen/expanded view specifically for the Monitored Sites section.
+
+Goal:
+Operators should be able to view all monitored sites more clearly, especially in Grid View.
+
+Requirements:
+- Add a fullscreen/expand button to Monitored Sites card/section
+- When clicked:
+  - Monitored Sites section expands to full screen or large overlay mode
+  - Other dashboard sections are hidden or dimmed
+  - Grid/List view should use the extra space properly
+  - Provide an exit fullscreen button
+  - ESC key should exit fullscreen if shortcut system exists
+- Keep filters/search/view toggle available inside fullscreen
+- Keep right-click actions working
+- Keep site status colors/badges visible
+- Make it useful for NOC wallboard / large monitor usage
+
+This is section-level fullscreen, not necessarily browser fullscreen.
+
+---
+
+## 11. Permissions and role behavior
+
+Apply permissions carefully.
+
+Suggested:
+- Founder/Admin:
+  - full access to audit logs
+  - site pause/resume
+  - audit export
+  - user status visibility
+- Operator:
+  - can view user presence
+  - can change own status/work shift
+  - can pause/resume sites if allowed by current project policy
+  - can view critical login popup
+- Viewer:
+  - cannot see critical operator popup
+  - cannot access full Audit Log
+  - cannot pause/resume sites
+  - can view site statuses if already allowed
+
+Backend permissions must be enforced.
+Do not rely only on frontend.
+
+---
+
+## 12. Localization
+
+Add Persian and English translations for all new UI text.
+
+Examples:
+Online → آنلاین
+Offline → آفلاین
+Away → دور از دسترس
+Busy → مشغول
+In Work Shift → در شیفت کاری
+Off Shift → خارج از شیفت
+Break → استراحت
+Available → آماده
+Last seen → آخرین بازدید
+Audit Log → لاگ مدیریتی
+Export TXT → خروجی متنی
+Additional DNS Resolver → DNS اضافه برای تست
+Pause Site Monitoring → توقف مانیتورینگ سایت
+Resume Site Monitoring → ادامه مانیتورینگ سایت
+Paused → متوقف‌شده
+Site is paused → مانیتورینگ این سایت متوقف شده است
+Recent Critical Events → رخدادهای بحرانی اخیر
+Fullscreen Monitored Sites → نمایش تمام‌صفحه سایت‌ها
+
+Do not show raw translation keys.
+
+---
+
+## 13. Quality requirements
+
+- Keep TypeScript clean
+- Keep UI responsive
+- Do not break existing monitoring
+- Do not expose secrets
+- Do not log sensitive data
+- Avoid unnecessary polling load
+- Use efficient heartbeat interval
+- Add loading/empty states
+- Add error handling
+- Use existing design system
+- Keep List View and Grid View behavior consistent
+- Update OpenAPI/typed client if this project uses it
+
+---
+
+## 14. Implementation freedom
+
+Please inspect the current project and improve these features in the most professional way possible.
+
+If there is a better implementation than my exact requested approach:
+- choose the better approach
+- keep the behavior aligned with my goals
+- explain what you changed and why
+
+The final result should feel like a real NOC operations dashboard:
+- accountable
+- multi-user aware
+- operator-friendly
+- audit-ready
+- clear site monitoring control
+- suitable for long-term operational use
+
+---
+
+## 15. Final report
+
+After implementation, explain:
+1. How user presence works
+2. How online/offline/away/work shift are tracked
+3. How auto-offline after 2 minutes works
+4. How logout after 30 minutes offline works
+5. How the login critical summary popup works
+6. What audit log coverage was added
+7. How site/resource names are displayed in audit logs
+8. How audit site filtering works
+9. How TXT export works
+10. How additional DNS resolver testing works
+11. How per-site pause/resume works
+12. How paused sites behave in automatic monitoring and manual queue
+13. How Monitored Sites fullscreen works
+14. What database fields/tables were added
+15. What files were changed
+16. How to test everything

@@ -1,0 +1,126 @@
+You are working on the backend architecture of a professional NOC monitoring system.
+
+The project already exists. Your task is to improve backend reliability, monitoring accuracy, notification consistency, SSL validation quality, and operational scalability.
+
+Important:
+
+* Preserve existing APIs when possible
+* Maintain compatibility with current frontend
+* Focus on production-grade behavior
+* Prioritize reliability over quick hacks
+
+Backend tasks:
+
+1. SSL Health Engine Rebuild
+   Current SSL validation is unreliable and produces many false invalid states.
+
+Completely redesign SSL validation logic using production-grade standards.
+
+Requirements:
+
+* proper TLS handshake validation
+* correct certificate chain verification
+* expiration detection accuracy
+* SNI support
+* timeout handling
+* retry handling
+* resolver fallback support
+* avoid false invalid states
+* distinguish:
+
+  * expired
+  * invalid chain
+  * hostname mismatch
+  * timeout
+  * unreachable
+  * self-signed
+  * weak TLS
+* improve expiring certificate calculations
+
+The current "5 expiring" inconsistencies must be fixed.
+
+2. Dedicated SSL Monitoring Module
+   Create a backend structure suitable for a future dedicated SSL section/page.
+   Provide:
+
+* SSL summaries
+* aggregation APIs
+* filtering
+* pagination
+* statistics
+* historical tracking readiness
+
+3. Notification Reliability
+   Fix browser notification logic:
+
+* disabled notifications must fully stop
+* websocket events should respect preferences
+* no duplicate notifications
+* no hidden notification triggers
+
+4. Bulk Site Pause/Resume
+   Add backend support for:
+
+* multi-site selection
+* batch pause
+* batch resume
+* transactional updates
+* efficient bulk operations
+
+5. Audit Log Search Optimization
+   Improve site filtering APIs:
+
+* search by partial name
+* fast autocomplete support
+* scalable queries for large datasets
+* indexed lookups if needed
+
+6. Remove Demo Seed Data
+   Stop automatically inserting default monitoring sites during installation/setup.
+
+New installations should start empty.
+
+7. Gateway Monitoring Simplification
+   Gateway monitoring should only use:
+   curl -I
+
+Remove unnecessary additional checks and backend complexity in this module.
+
+Focus on:
+
+* status code
+* latency
+* timeout
+* availability
+
+8. Monitoring Scalability
+   Optimize backend for high site counts:
+
+* queue efficiency
+* reduced redundant checks
+* better concurrency handling
+* lightweight status broadcasting
+* websocket optimization
+
+9. Recent Activity Improvements
+   Include:
+
+* logs
+* live console activity
+  inside recent activity APIs/events.
+
+10. Production Stability
+    Improve:
+
+* retry logic
+* timeout handling
+* monitoring queue robustness
+* websocket stability
+* DB query efficiency
+* monitoring scheduler reliability
+
+11. Maintain Existing Architecture
+    Do not rewrite the entire backend.
+    Improve existing systems intelligently and incrementally.
+
+Use production-grade engineering decisions similar to enterprise monitoring systems.

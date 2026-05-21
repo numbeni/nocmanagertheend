@@ -1,0 +1,254 @@
+## Add Nextcloud Talk important alerts
+
+I uploaded an older Python source that shows how our company sends messages to Nextcloud Talk.
+
+The old scripts use the Nextcloud Talk OCS API.
+
+## Old Python logic
+
+The scripts define:
+
+```py
+NEXTCLOUD_URL = "https://next.vibrence.shop"
+NEXTCLOUD_USER = "checkcurl"
+NEXTCLOUD_PASS = "..."
+NEXTCLOUD_ROOM = "room_token"
+```
+
+Then they build the API URL like this:
+
+```py
+NEXTCLOUD_API = f"{NEXTCLOUD_URL}/ocs/v2.php/apps/spreed/api/v1/chat/{NEXTCLOUD_ROOM}"
+```
+
+They send messages with:
+
+```py
+headers = {
+    "OCS-APIRequest": "true",
+    "Content-Type": "application/json",
+    "Accept": "application/json"
+}
+
+payload = {
+    "message": message
+}
+
+requests.post(
+    NEXTCLOUD_API,
+    auth=(NEXTCLOUD_USER, NEXTCLOUD_PASS),
+    headers=headers,
+    json=payload,
+    timeout=30
+)
+```
+
+## Required implementation in the new Node.js project
+
+Add a new backend alert service for Nextcloud Talk.
+
+Create something like:
+
+```text
+artifacts/api-server/src/services/nextcloud-talk.ts
+```
+
+or:
+
+```text
+artifacts/api-server/src/services/important-alerts.ts
+```
+
+## Environment variables
+
+Do not hardcode credentials.
+
+Read these from environment variables:
+
+```env
+NEXTCLOUD_TALK_URL=https://next.vibrence.shop
+NEXTCLOUD_TALK_USER=
+NEXTCLOUD_TALK_PASSWORD=
+NEXTCLOUD_TALK_ROOM=
+```
+
+Optional support for multiple rooms:
+
+```env
+NEXTCLOUD_TALK_ROOMS=room1,room2,room3
+```
+
+Priority:
+
+```text
+If NEXTCLOUD_TALK_ROOMS exists, send to all rooms.
+Otherwise use NEXTCLOUD_TALK_ROOM.
+```
+
+## API URL
+
+For each room, build:
+
+```text
+{NEXTCLOUD_TALK_URL}/ocs/v2.php/apps/spreed/api/v1/chat/{room}
+```
+
+## Request details
+
+Use HTTP POST.
+
+Headers:
+
+```ts
+{
+  "OCS-APIRequest": "true",
+  "Content-Type": "application/json",
+  "Accept": "application/json"
+}
+```
+
+Body:
+
+```ts
+{
+  "message": message
+}
+```
+
+Authentication:
+
+Use Basic Auth with:
+
+```text
+NEXTCLOUD_TALK_USER
+NEXTCLOUD_TALK_PASSWORD
+```
+
+In Node.js:
+
+```ts
+const basicAuth = Buffer.from(`${user}:${password}`).toString("base64");
+```
+
+Then set:
+
+```ts
+Authorization: `Basic ${basicAuth}`
+```
+
+## What messages should be sent
+
+This Nextcloud Talk channel is for important company-level alerts only.
+
+Send only serious alerts:
+
+* site truly down
+* DNS failure
+* TCP unreachable
+* repeated HTTP 5xx
+* SSL expires in 3 days or less
+* new critical incident
+* critical incident resolved
+* many sites failing at once
+* bulk check detects possible infrastructure-wide issue
+
+Do not send:
+
+* every regular check
+* every normal log
+* every slow warning
+* minor product check warning
+* repeated duplicate messages every minute
+
+## Deduplication and cooldown
+
+Add deduplication.
+
+Use a fingerprint such as:
+
+```ts
+siteId + alertType + rootCause + severity
+```
+
+Recommended cooldown:
+
+```text
+30 minutes
+```
+
+Send again immediately only if:
+
+* severity increases
+* site changes from warning/degraded to down
+* root cause changes
+* incident resolves
+
+## Message format
+
+Messages should be short and bilingual Persian + English.
+
+Example:
+
+```text
+🚨 Critical Hosting Alert
+
+Site: example.com
+Status: DOWN
+Cause: DNS failure
+Time: 2026-04-27 14:32
+Action: Check DNS records and nameservers.
+
+————
+
+🚨 هشدار مهم هاستینگ
+
+سایت: example.com
+وضعیت: قطع
+علت: مشکل DNS
+زمان: 2026-04-27 14:32
+اقدام پیشنهادی: رکوردهای DNS و نیم‌سرورها بررسی شوند.
+```
+
+## Test endpoint
+
+Add backend endpoints:
+
+```text
+GET /api/admin/nextcloud-talk-status
+POST /api/admin/test-nextcloud-talk
+```
+
+The status endpoint must never expose secrets.
+
+Return only safe info:
+
+```json
+{
+  "configured": true,
+  "hasUrl": true,
+  "hasUser": true,
+  "hasPassword": true,
+  "roomCount": 1
+}
+```
+
+The test endpoint should send a small test message to the configured Nextcloud Talk room(s).
+
+## Error handling
+
+* If Nextcloud send fails, log it.
+* Never crash the monitoring loop.
+* Use timeout 30 seconds.
+* Return useful error messages in backend logs.
+* Do not expose password or full auth header anywhere.
+
+## Relationship with Telegram
+
+Keep Telegram if it already exists, but Nextcloud Talk should be the high-priority internal alert channel.
+
+Telegram can be used for operators.
+Nextcloud Talk should be used only for serious alerts that company leadership or responsible admins need to see.
+
+## Important
+
+The old Python scripts send every final report to Nextcloud Talk, but in the new app I only want serious alerts and important incidents sent there.

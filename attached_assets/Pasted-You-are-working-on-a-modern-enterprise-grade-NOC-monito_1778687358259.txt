@@ -1,0 +1,119 @@
+You are working on a modern enterprise-grade NOC monitoring dashboard UI.
+
+The project already exists and has a dark cyber-style monitoring interface. Your task is to improve UX, operator workflow, scalability, dashboard readability, and real-world usability for server-side monitoring operators.
+
+Important:
+
+* Keep the current visual identity and dark NOC style.
+* Do NOT redesign everything from scratch.
+* All new sections/components must visually match existing dashboard cards and spacing.
+* Maintain responsive behavior and keyboard accessibility.
+* Focus on professional NOC/SOC dashboard UX patterns.
+
+Frontend tasks:
+
+1. Dashboard Grid Density Mode
+   Add a new "Ultra Compact" per-page/grid density mode that automatically shrinks all monitoring cards/items so ALL monitored sites can fit into a single page without scrolling.
+   This mode is specifically for wall displays and server room operators.
+   It should:
+
+* reduce padding/margins intelligently
+* reduce card heights
+* reduce typography scale slightly
+* preserve readability
+* fit maximum sites on screen
+* activate from existing per-page controls
+
+2. Fullscreen Shortcut Fix
+   Currently pressing "Ctrl + F" triggers fullscreen because of the existing "F" keyboard shortcut.
+   Fix this behavior:
+
+* ONLY plain "f" without modifiers should toggle fullscreen
+* Ctrl+F must remain browser search
+* Ignore shortcuts when typing in inputs/textareas/search fields
+
+3. Multi Site Pause
+   In dashboard list view:
+
+* add multi-select capability
+* allow selecting multiple monitored sites
+* add bulk pause/resume monitoring actions
+* add proper selection UI and batch action toolbar
+
+4. Notification Problems
+   Chrome notifications still appear even after notifications are disabled.
+   Fix notification state synchronization:
+
+* disabled means absolutely no browser notification
+* ensure websocket/event listeners stop triggering notifications
+* persist preference correctly
+
+5. Recent Activity Improvements
+   Mention:
+
+* live console events
+* logs activity
+  inside dashboard recent activity section.
+
+6. Audit Log Site Filter UX
+   Current site filtering is not usable with many sites.
+   Improve it:
+
+* searchable autocomplete select
+* user can type site name
+* suggestions appear while typing
+* keyboard navigation support
+* optimized for large datasets
+
+7. SSL Health UX Rework
+   Current SSL health implementation is unreliable and confusing.
+   Completely improve SSL visualization UX:
+
+* optionally create a dedicated "SSL" sidebar page
+* dashboard SSL card becomes summary/shortcut
+* show:
+
+  * expiring soon
+  * invalid
+  * healthy
+  * recently changed
+* better grouping/filtering
+* no popup-based UX
+* enterprise-style SSL overview page
+
+8. Remove Default Demo Sites
+   Do not auto-create demo/default sites anymore.
+   No predefined sites like:
+
+* Aparat
+* Bank Melli
+* Cloudflare
+  etc.
+
+System should start clean for new installations.
+
+9. Payment Gateway Monitoring UI Simplification
+   In gateway monitoring section:
+   ONLY show curl -I results/status.
+   Remove other unnecessary checks and UI noise.
+   Everything in this section should revolve around curl-based availability and latency.
+
+10. Preserve Existing Theme
+    Do not break:
+
+* current dark theme
+* RTL support
+* Persian typography
+* existing layout system
+* monitoring cards
+
+11. General Quality Improvements
+    While implementing:
+
+* improve operator workflow
+* reduce visual clutter
+* improve dashboard scanability
+* improve performance for large site counts
+* improve compactness without reducing clarity
+
+Be autonomous and make intelligent UX decisions where needed.

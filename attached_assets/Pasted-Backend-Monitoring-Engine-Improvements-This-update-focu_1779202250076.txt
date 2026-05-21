@@ -1,0 +1,149 @@
+Backend / Monitoring Engine Improvements
+
+This update focuses on improving monitoring stability, operator control, UX clarity, and reliability under unstable network conditions.
+
+1. Monitoring Pause / Resume Logic
+
+* If operators pause monitoring during an active sweep, preserve the current sweep state in memory.
+* When monitoring is resumed, continue from the exact previous checkpoint instead of restarting the sweep from the beginning.
+* Sweep progress persistence must survive temporary UI reloads or frontend refreshes whenever possible.
+
+2. Paused Critical / Down Site Visual State
+
+* If a site inside Critical / Down sections is manually paused by an operator:
+
+  * show a dedicated paused visual state,
+  * include a pause icon/badge,
+  * apply a distinct paused color palette similar to paused server cards.
+* Operators must immediately understand visually that the site is excluded intentionally and is not actively being monitored.
+
+3. “Currently Fine” Temporary Ignore Mode
+   Add a new right-click/context action similar to Pause:
+
+* name suggestion: “Currently Fine”
+* purpose:
+
+  * for unstable Iranian network conditions where a site may temporarily flap/down incorrectly.
+* behavior:
+
+  * exclude the site from active alert/critical processing,
+  * remove it from Critical banners,
+  * visually treat it almost like an UP site,
+  * but use a slightly different green tone so operators can distinguish it from genuinely healthy monitored sites.
+* While enabled:
+
+  * monitoring checks for that site should be skipped similarly to pause mode.
+* This state remains active until manually disabled by the operator.
+
+4. Sweep Progress Visibility
+   Improve the sweep status bar:
+
+* display exact progress counts for each phase.
+  Example:
+* “First Pass 5/10”
+* meaning: currently checking site 5 out of 10.
+  This should work for:
+* server sweeps,
+* critical/down recovery passes,
+* retry phases.
+
+Operators should always understand:
+
+* where the engine currently is,
+* how many sites remain,
+* and which phase is active.
+
+5. Retry Validation for SSL & Payment Gateway Checks
+   For both:
+
+* SSL section,
+* Payment Gateway section,
+
+during:
+
+* manual checks,
+* automatic batch checks,
+
+if a site fails on the first attempt:
+
+* immediately retry the same test once more before registering the failure.
+
+Purpose:
+
+* avoid false alerts caused by temporary packet loss or unstable connectivity.
+
+Only register/report the issue if:
+
+* both attempts fail,
+* or both responses remain degraded/down/invalid.
+
+6. Nextcloud Talk Alerts
+   After automatic checks:
+
+* send problematic SSL results to Nextcloud Talk,
+* send problematic payment gateway results to Nextcloud Talk.
+
+Examples:
+
+* SSL expired,
+* SSL close to expiration,
+* gateway unavailable,
+* gateway degraded.
+
+Improve and redesign SSL notification scheduling settings because the current implementation is not practical enough for operators.
+
+7. Human-Readable Sweep Duration
+   When a sweep finishes:
+
+* display duration in human-readable format instead of milliseconds.
+
+Example:
+
+* “5 minutes 10 seconds”
+  instead of:
+* “310000ms”
+
+8. SSL Dashboard Layout
+   Remove:
+
+* “SSL Warning Trend” chart.
+
+Replace it with:
+
+* “SSL Certificate Status” chart.
+
+Ensure:
+
+* proper responsive layout,
+* correct spacing,
+* CSS consistency,
+* clean dashboard alignment.
+
+9. Uptime Calculation Logic
+   Inside each site details page:
+
+* uptime percentage should include both:
+
+  * UP sites,
+  * SLOW sites.
+
+Calculation should reflect:
+(UP + SLOW) / ALL STATES
+
+instead of only counting strict UP status.
+
+10. Internet Connectivity Loss Handling
+    If internet connectivity is lost during a sweep:
+
+* do NOT fail the entire sweep immediately.
+* pause the engine at the current checkpoint,
+* wait until internet connectivity is restored,
+* then continue the sweep from the same position automatically.
+
+This is extremely important for unstable environments and Iranian network conditions.
+
+General Note
+This monitoring system is designed primarily for resilience under unstable infrastructure and intermittent connectivity.
+Operator responsiveness, accurate prioritization, avoiding false positives, and maintaining sweep continuity are more important than raw scan speed.
+
+Feel free to improve architecture, queue prioritization, retry handling, UI/UX consistency, and internal state management wherever necessary, as long as the core monitoring philosophy and workflow remain intact.

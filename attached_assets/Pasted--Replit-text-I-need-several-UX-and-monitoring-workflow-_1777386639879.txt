@@ -1,0 +1,347 @@
+این پرامپت کامل رو بده به Replit:
+
+````text
+I need several UX and monitoring workflow improvements in my NOC Monitoring project.
+
+Please implement these carefully without breaking the existing dashboard, monitoring engine, API client, or database.
+
+---
+
+## 1. Fix Resume Monitoring delay
+
+Problem:
+
+When I pause monitoring and then resume it, the log shows:
+
+[17:42:08] [WARN ] [system] Monitoring paused by operator
+[17:42:10] [INFO ] [system] Monitoring resumed by operator
+[17:42:24] [INFO ] [system] Monitoring sweep started for 8 sites
+
+This means after pressing "Resume Monitoring", the system waits too long before starting the next monitoring sweep.
+
+### Required behavior
+
+When the operator clicks Resume Monitoring:
+
+1. Immediately mark monitoring as resumed.
+2. Immediately trigger a monitoring sweep.
+3. Do not wait for the next interval tick.
+
+Expected log flow:
+
+[time] Monitoring resumed by operator
+[time] Monitoring sweep started for X sites
+
+The sweep should start almost immediately after resume.
+
+### Backend requirements
+
+Find the pause/resume monitoring logic and update it so:
+
+- `resumeMonitoring()` or the `/monitor/resume` endpoint triggers an immediate sweep.
+- It should still preserve the normal interval schedule afterward.
+- Avoid starting duplicate sweeps if one is already running.
+- Add protection like `isSweepRunning` if needed.
+
+---
+
+## 2. Rename and move Run Check button
+
+Current button:
+
+```text
+Run Check on All Sites
+````
+
+Change text to:
+
+```text
+Manually run check on all sites
+```
+
+Also move this button.
+
+### Current location
+
+It is currently in the Dashboard Overview top area.
+
+### New location
+
+Move it to the Dashboard → Monitored Sites card.
+
+Place it exactly in the top-right corner of the `Monitored Sites` card header.
+
+So the card header should have:
+
+* left side: title `Monitored Sites` and description
+* right side: button `Manually run check on all sites`
+
+Keep loading state and existing behavior.
+
+---
+
+## 3. Incident notes
+
+Add the ability to add notes to incidents from the incident detail page.
+
+### Requirements
+
+On each incident detail page:
+
+* Add a Notes section.
+* Operator can write a note.
+* Operator can submit the note.
+* Notes should be shown in chronological order.
+* Each note should show:
+
+  * note text
+  * created time
+  * author if available, otherwise `Operator`
+
+### Backend
+
+Add support for incident notes.
+
+Recommended database table:
+
+```text
+incident_notes
+```
+
+Fields:
+
+```text
+id
+incidentId
+note
+author
+createdAt
+```
+
+### API endpoints
+
+Add endpoints like:
+
+```text
+GET /api/incidents/:id/notes
+POST /api/incidents/:id/notes
+```
+
+POST body:
+
+```json
+{
+  "note": "Checked DNS records. Nameservers look correct.",
+  "author": "Operator"
+}
+```
+
+### UI
+
+In incident detail page:
+
+* Add textarea
+* Add button: `Add note`
+* Disable button when empty
+* Show success/failure toast
+* Refetch notes after adding
+
+---
+
+## 4. Better custom scrollbar
+
+Add a more polished scrollbar style globally.
+
+### Requirements
+
+* Works well with dark theme
+* Thin scrollbar
+* Rounded thumb
+* Subtle hover state
+* Should apply to:
+
+  * page scroll
+  * tables/overflow areas
+  * live console
+  * logs
+
+Add this globally in CSS, probably:
+
+```text
+artifacts/noc-monitor/src/index.css
+```
+
+Example style:
+
+```css
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.25);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.45);
+  background-clip: content-box;
+}
+```
+
+Adjust as needed to match the current theme.
+
+---
+
+## 5. Add a useful chart under Latency Trend
+
+There is too much empty space below the Latency Trend chart.
+
+Add another useful chart in the Dashboard.
+
+Suggested chart options:
+
+### Preferred: Status Distribution chart
+
+Show current site status distribution:
+
+* up
+* down
+* degraded
+* slow
+* blocked
+* unknown
+
+Use a small bar chart or donut/pie chart.
+
+### Alternative: Response Time Buckets
+
+Show how many sites are in latency ranges:
+
+```text
+0–300ms
+300–1000ms
+1–3s
+3s+
+unknown
+```
+
+### UI placement
+
+Place it below or beside the existing Latency Trend area in a way that fills empty space and improves dashboard usefulness.
+
+Use existing chart library if already installed, likely Recharts.
+
+Make it visually consistent with the existing dark UI.
+
+---
+
+## 6. Text report for monitored sites
+
+In Dashboard → Monitored Sites card, add a text report feature.
+
+### UI
+
+Add a button in the Monitored Sites card header or toolbar:
+
+```text
+Generate text report
+```
+
+Next to it, add a time-range selector:
+
+```text
+Last 1 hour
+Last 6 hours
+Last 12 hours
+Last 24 hours
+Last 7 days
+```
+
+Operator should be able to choose the report duration.
+
+### Behavior
+
+When clicked, generate a text report about website status for the selected time range.
+
+The report should include:
+
+* report time range
+* total sites
+* up/down/degraded/slow counts
+* open incidents count
+* average response time
+* sites currently down
+* sites degraded
+* sites with SSL expiring soon
+* optionally worst response times
+* short summary in operator-friendly language
+
+### Output options
+
+At minimum:
+
+* Show report in a modal/dialog
+* Add button to copy report to clipboard
+
+Optional:
+
+* Add download `.txt`
+
+### Backend
+
+You can implement either:
+
+Option A — frontend generates report from existing API data.
+
+Option B — backend endpoint:
+
+```text
+GET /api/reports/sites?hours=24
+```
+
+Return:
+
+```json
+{
+  "hours": 24,
+  "generatedAt": "...",
+  "text": "..."
+}
+```
+
+Preferred: backend endpoint if historical checks are needed.
+
+### Important
+
+The report should respect the selected time range. If exact historical calculations are not available, use current status plus recent checks/incidents from that range.
+
+---
+
+## 7. General requirements
+
+* Keep TypeScript clean.
+* Update OpenAPI and generated client if backend APIs are added.
+* Run typecheck for backend and frontend.
+* Do not break existing monitoring, dashboard, logs, incidents, DNS, Nextcloud, or diagnostics features.
+* Keep Persian/English translation style consistent if translations are used.
+* After implementation, provide:
+
+  * changed files list
+  * how to test each feature
+  * any new commands needed
+
+```
+```

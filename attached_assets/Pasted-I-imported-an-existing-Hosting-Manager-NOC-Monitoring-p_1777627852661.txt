@@ -1,0 +1,316 @@
+I imported an existing Hosting Manager / NOC Monitoring project. Please inspect the current code, data model, APIs, UI, and monitoring logic first. Do not rewrite the project. Keep the current architecture and design language, but improve the operator experience based on the items below.
+
+Important:
+- Do not blindly implement only the exact wording.
+- First analyze what already exists.
+- Then implement the cleanest and most useful version.
+- Preserve existing features.
+- Keep changes minimal but complete.
+- Use the existing i18n/localization, settings, API, and database patterns.
+
+Project context:
+- Hosting / NOC Monitoring Dashboard
+- Backend: Express + TypeScript
+- Frontend: React + Vite
+- Database: PostgreSQL + Drizzle
+- Existing sections: Dashboard, Charts & Status, Monitored Sites, Incidents, Logs, Live Console, Settings, site detail pages, monitoring queue
+
+1. Improve Charts & Status page
+
+Improve the Charts & Status section so it becomes genuinely useful for both operators and management.
+
+Please inspect the current available data first and add the most useful charts that can be supported safely.
+
+Suggested high-value charts:
+- Error Rate Trend
+- Incident Created vs Resolved
+- Success vs Failure Trend
+- Overall Uptime Trend
+- Top Unstable Sites
+- Average Response Time Trend
+- SSL Warning Trend
+- DNS Failure Trend
+- Status Distribution
+- Latency Trend
+- Recent Activity, scrollable
+
+Recommended layout:
+Row 1:
+- Latency Trend
+- Recent Activity, scrollable
+
+Row 2:
+- Error Rate Trend
+- Incident Created vs Resolved
+
+Row 3:
+- Status Distribution
+- Success vs Failure Trend
+
+Row 4:
+- SSL Warning Trend
+- DNS Failure Trend
+
+Row 5:
+- Overall Uptime Trend
+- Top Unstable Sites
+
+This layout is a suggestion. If the current app structure requires a better layout, choose the best clean dashboard layout yourself.
+
+Chart requirements:
+- Add time range selector where useful:
+  - 30 minutes
+  - 1 hour
+  - 12 hours
+  - 24 hours
+  - 7 days
+- Use consistent colors:
+  - Green = healthy/up/success
+  - Yellow = warning/slow
+  - Red = down/critical/failure
+  - Orange = degraded/blocked
+  - Blue = general metrics
+  - Gray = unknown/disabled
+- Add small summary stats where useful:
+  - current
+  - average
+  - max
+  - min
+  - total
+- Avoid chart clutter.
+- Use responsive cards.
+- Avoid huge empty spaces.
+- Keep Recent Activity scrollable and visually aligned with the charts.
+- Add empty/loading states.
+- Optimize API calls and avoid loading too much history at once.
+
+2. Add useful charts to each individual site detail page
+
+Improve the individual site detail page analytics.
+
+The site detail page should not only show a simple response time history. It should allow the user to choose what chart they want to view.
+
+Add a chart selector/dropdown or tabs for site-specific charts.
+
+Suggested per-site charts:
+- Response Time History
+- Status History
+- Success vs Failure History
+- Error Type Trend
+- DNS Failure History
+- SSL Days Remaining Trend
+- Incident History for this site
+- Availability/Uptime Trend for this site
+- Check Duration / Latency Trend
+
+Let the Replit AI inspect what data is available and implement the most useful supported charts.
+
+Requirements:
+- User can choose which chart to display.
+- Keep default chart as Response Time History.
+- Add time range selector where useful.
+- Show clear empty states if the site has no history yet.
+- Keep charts responsive and readable.
+- Use existing site detail page style.
+
+3. Move monitored sites report time range into Generate Report
+
+Currently the time range selector for reports about monitored sites is outside the Generate Report section or not placed clearly.
+
+Move the report time range selection into the Generate Report area.
+
+Requirement:
+- The user should choose report range inside the Generate Report component/section.
+- Examples:
+  - 30 minutes
+  - 1 hour
+  - 12 hours
+  - 24 hours
+  - 7 days
+  - custom range if easy
+- Keep the report UI clear:
+  - choose range
+  - choose report type if applicable
+  - generate report button
+  - display/export/copy result
+- Remove duplicate or confusing report range selectors outside that section.
+
+4. Add right-click context menu features in Dashboard and Incidents
+
+Add useful right-click actions to improve operator speed.
+
+Please inspect the UI and add context menus where they make sense.
+
+Required areas:
+- Dashboard monitored site items/list/grid
+- Incidents list/table/cards
+
+Suggested right-click actions for monitored sites:
+- Run check now
+- Open site detail
+- Open website in new tab
+- Copy URL
+- Copy domain
+- Pause monitoring for this site
+- Resume monitoring for this site
+- Enable maintenance mode if available
+- View diagnostics
+- View recent checks
+- Generate report for this site
+- Delete/clear history only if existing permissions and confirmation already support it
+
+Suggested right-click actions for incidents:
+- Open incident detail
+- Acknowledge incident
+- Mark as investigating
+- Resolve incident
+- Copy incident summary
+- Copy affected site URL/domain
+- Open related site
+- Filter incidents by this site
+- View related logs/checks
+
+Requirements:
+- Use a clean custom context menu, not browser default.
+- Respect disabled states.
+- Show confirmation for destructive actions.
+- Do not expose dangerous actions without confirmation.
+- Make it work in both list and grid views.
+- Add Persian translations for all context menu labels.
+- Keep keyboard/accessibility basics if possible.
+
+5. Show exact problem cause for any non-UP site
+
+In both list view and grid view, if a site has any status other than UP, show the reason clearly.
+
+Statuses include:
+- down
+- slow
+- degraded
+- unstable
+- blocked
+- unknown
+
+Requirement:
+- Show the specific root cause or best available reason.
+- Do not only show “Down” or “Degraded”.
+- Examples:
+  - DNS timeout
+  - HTTP 500 repeated
+  - SSL expires soon
+  - TCP port 443 unreachable
+  - Fetch failed
+  - High latency
+  - Blocked by firewall/CDN
+  - Unstable: multiple status changes in recent checks
+- If the technical error exists, show both:
+  - human-readable cause
+  - technical detail in tooltip or small secondary text
+
+Example:
+Status: Down
+Cause: DNS timeout
+Technical: queryA ETIMEOUT example.com
+
+Grid view:
+- Keep the card clean.
+- Show short cause text.
+- Use tooltip or expandable detail for long errors.
+
+List view:
+- Add a “Cause” or “Problem” column if needed.
+
+6. Fix “Default Dashboard View” setting
+
+The setting “Default Dashboard View” is unclear and does not visibly change anything.
+
+Please inspect the current implementation and fix it.
+
+Expected behavior:
+- Make the setting meaningful and visible.
+- It should clearly control what the user sees first or how dashboard content is displayed.
+
+Possible interpretations:
+- Default landing tab:
+  - Dashboard
+  - Charts & Status
+  - Incidents
+  - Live Console
+- Or default monitored sites view:
+  - List view
+  - Grid view
+- Or default dashboard layout:
+  - Overview first
+  - Sites first
+  - Charts first
+
+Choose the most useful interpretation based on the current app code, but make it obvious in the UI.
+
+Requirements:
+- Rename the label if needed so it is understandable.
+- Add helper text explaining what it does.
+- Ensure changing it actually changes behavior.
+- Persist the setting.
+- Add Persian translation.
+- If the old setting is redundant, migrate or replace it cleanly.
+
+7. Improve Monitoring Queue behavior after a cycle finishes
+
+Current issue:
+When a queue finishes, it becomes empty until the next cycle starts. This feels bad and confusing.
+
+Expected behavior:
+- When the current queue finishes, transition it out with a smooth animation.
+- Show the next scheduled queue/cycle while countdown is running.
+- The queue section should not look empty or broken between cycles.
+
+Requirements:
+- Always show:
+  - current cycle queue if running
+  - next cycle countdown if idle
+  - next upcoming queue if available
+- Add countdown:
+  “Next monitoring cycle in: 2m 30s”
+- Persian:
+  “چرخه بعدی مانیتورینگ تا ۲ دقیقه و ۳۰ ثانیه دیگر شروع می‌شود”
+- If no current checks are running, show idle state but still show upcoming cycle information.
+- Queue list should be scrollable if large.
+- Do not let the queue card grow too tall.
+- Add smooth enter/exit animations for queue items.
+- Highlight currently checking site.
+- Show waiting/checking/completed/skipped states.
+
+8. Localization
+
+Add Persian translations for all new text.
+
+Important:
+- Do not show raw translation keys.
+- Fix any remaining untranslated strings you touch.
+- Persian should be professional and operator-friendly.
+- Keep technical terms like DNS, SSL, TCP, HTTP, URL when appropriate.
+
+9. Quality and performance
+
+- Do not break existing monitoring logic.
+- Avoid heavy polling.
+- Avoid loading full history for all charts if not needed.
+- Use limits, aggregation, or downsampling for long ranges like 7 days.
+- Keep TypeScript types clean.
+- Use existing API/client patterns.
+- Update OpenAPI if this project uses it.
+- Keep UI responsive.
+- Add loading and empty states.
+- Do not expose secrets to frontend.
+
+After implementation, report:
+1. What files were changed.
+2. What charts were added to Charts & Status.
+3. What charts were added to site detail pages.
+4. How report range placement changed.
+5. What right-click actions were added.
+6. How non-UP causes are shown.
+7. What “Default Dashboard View” now does.
+8. How the queue transition/countdown works.
+9. Any backend/API/database changes.
+10. How to test each change.

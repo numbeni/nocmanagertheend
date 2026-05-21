@@ -1,0 +1,290 @@
+ 
+
+## 🧾 FINAL REPLIT PROMPT (UPDATED)
+
+You are a senior backend engineer and system architect.
+
+Build a production-grade **Website Monitoring & Incident Detection Platform** for a hosting company.
+
+This is a **local web-based NOC-style monitoring system** that continuously monitors multiple customer websites and detects DNS issues, HTTP failures, SSL problems, latency issues, and server outages.
+
+The system must be modular, scalable, and ready for future production use.
+
+---
+
+# 🎯 CORE OBJECTIVE
+
+The system must:
+
+* Continuously monitor a dynamic list of websites
+* Detect and classify failures (not just UP/DOWN)
+* Provide a real-time web dashboard (local hosted)
+* Store historical monitoring data
+* Generate smart alerts only when real incidents happen
+* Be structured for scalability and future SaaS conversion
+
+---
+
+# 📄 WEBSITE INPUT SYSTEM (IMPORTANT)
+
+The system MUST load monitored websites from an external file.
+
+## Option 1 (Simple MVP):
+
+`sites.txt`
+
+Example:
+
+```txt id="sites_txt"
+https://example.com
+https://google.com
+https://myshop.ir
+```
+
+## Option 2 (Preferred):
+
+`sites.json`
+
+```json id="sites_json"
+[
+  {
+    "name": "Shop 1",
+    "url": "https://example.com"
+  },
+  {
+    "name": "Shop 2",
+    "url": "https://google.com"
+  }
+]
+```
+
+The system must dynamically read this file at runtime.
+
+---
+
+# 🧠 MONITORING ENGINE REQUIREMENTS
+
+For each site, perform:
+
+## 1. DNS Monitoring (Gold DNS ready)
+
+* Resolve domain using multiple resolvers (mock or pluggable module)
+* Detect:
+
+  * DNS failure
+  * propagation issues
+  * slow resolution
+
+---
+
+## 2. HTTP Monitoring
+
+* Perform GET request
+* Capture:
+
+  * status code
+  * response time
+  * timeout errors
+
+Detect:
+
+* DOWN (no response)
+* SERVER ERROR (500+)
+* SLOW (high latency)
+
+---
+
+## 3. TCP Check
+
+* Check ports 80 and 443 availability
+
+---
+
+## 4. SSL Monitoring
+
+* certificate validity
+* expiration date
+* hostname mismatch
+
+---
+
+# 🧠 INCIDENT DETECTION ENGINE
+
+Convert raw checks into structured incidents:
+
+Example output:
+
+```json id="incident_model"
+{
+  "domain": "example.com",
+  "dns_status": "OK",
+  "http_status": 500,
+  "response_time": 3.2,
+  "ssl_status": "VALID",
+  "incident_type": "Application Issue",
+  "severity": "CRITICAL",
+  "overall_status": "DOWN"
+}
+```
+
+---
+
+# 🚨 SMART ALERT SYSTEM
+
+Implement intelligent alerting:
+
+Rules:
+
+* Do NOT alert on single failure
+* Trigger alert only after 3 consecutive failures
+* Deduplicate alerts
+* Track alert lifecycle:
+
+States:
+
+* OPEN
+* ACKNOWLEDGED
+* RESOLVED
+
+Alerts should be grouped:
+
+* If multiple sites affected by same server → single incident
+
+---
+
+# 🗄️ DATABASE REQUIREMENTS
+
+Use SQLite for MVP (structured for PostgreSQL upgrade later).
+
+Store:
+
+* monitoring results (time-series data)
+* incidents
+* alerts
+
+Each record must include:
+
+* timestamp
+* domain
+* status
+* response time
+* error type
+
+---
+
+# 🌐 WEB DASHBOARD (LOCAL NOC PANEL)
+
+Build a simple FastAPI-based web dashboard.
+
+Must include:
+
+## Main Dashboard:
+
+* list of all domains
+* current status (OK / DOWN / SLOW)
+* response time
+* last check timestamp
+
+## Incident View:
+
+* history per domain
+* timeline of failures
+* uptime overview
+
+UI should be simple, fast, and readable.
+
+---
+
+# ⚙️ EXECUTION ENGINE
+
+System must:
+
+* run continuously in background
+* check all sites every 60 seconds
+* support threading or async execution
+* handle failures without crashing
+
+---
+
+# 📊 ADVANCED FEATURES (OPTIONAL BUT DESIRABLE)
+
+* uptime percentage per domain
+* latency trend tracking
+* grouping by server/IP
+* anomaly detection (rule-based is enough)
+* request failure trends
+
+---
+
+# 🧩 ARCHITECTURE
+
+System must follow modular architecture:
+
+* monitoring engine
+* DNS engine (Gold DNS integration ready)
+* incident engine
+* alert engine
+* storage layer
+* web dashboard
+
+---
+
+# 🌐 GOLD DNS MODULE
+
+Include a placeholder module:
+
+* supports multiple resolver checks
+* latency measurement
+* DNS health scoring
+
+---
+
+# 🖥️ TECH STACK
+
+Use:
+
+* Python 3.10+
+* FastAPI
+* SQLite
+* Requests
+* Jinja2 (or simple HTML templates)
+* threading or asyncio
+
+---
+
+# 🎯 FINAL OUTPUT REQUIREMENTS
+
+The system must:
+
+* Run with a single command
+* Start monitoring automatically
+* Display a local web dashboard (localhost)
+* Load sites from external file (txt or json)
+* Store historical monitoring data
+* Detect real incidents intelligently
+* Be modular and production-ready
+
+---
+
+# ⚠️ DESIGN PHILOSOPHY
+
+This is NOT a simple ping tool.
+
+It should behave like a real **hosting NOC monitoring system**, capable of:
+
+* diagnosing issues
+* reducing false alerts
+* grouping incidents
+* scaling to thousands of domains
+
+---
+
+# 🧠 IMPORTANT FINAL INSTRUCTION
+
+After implementing the system, you are allowed and encouraged to:
+
+> Improve, refactor, or modify the architecture, logic, or implementation if you believe it makes the system more efficient, scalable, reliable, or closer to production-grade standards.
+
+Your goal is not just to follow instructions, but to **elevate this project to the best possible engineering design.**
+
+

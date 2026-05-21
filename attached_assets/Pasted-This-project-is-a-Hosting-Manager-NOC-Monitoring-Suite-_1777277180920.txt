@@ -1,0 +1,331 @@
+This project is a Hosting Manager / NOC Monitoring Suite for a hosting company.
+
+The purpose of the app is to monitor websites, detect outages, diagnose technical problems, and help operators quickly understand what is wrong.
+
+## Main architecture
+
+The project is a monorepo using:
+
+* Backend: Node.js + Express + TypeScript
+* Frontend: React + Vite + TypeScript + Tailwind/shadcn
+* Database: PostgreSQL with Drizzle ORM
+* API contract: OpenAPI + generated React Query client
+* Package manager: pnpm workspace
+
+## Main backend behavior
+
+The backend monitors websites automatically and stores results in PostgreSQL.
+
+For every monitored site, it checks:
+
+* DNS resolution
+* HTTP response
+* TCP connectivity
+* SSL certificate status
+* response time / latency
+* blocked/WAF-like responses
+* product/category page availability for ecommerce sites
+* curl-style HTTP diagnostic information
+
+## Site statuses
+
+The app uses these statuses:
+
+* up: site is healthy
+* slow: site is reachable but slow
+* degraded: site is reachable but has a warning or quality issue, such as SSL expiring soon
+* blocked: site appears blocked by WAF/firewall/CDN
+* not_stable: site is intermittently failing
+* down: site is truly unreachable
+* unknown: not enough data
+
+Important logic:
+
+`degraded` must NOT be treated as `down`.
+
+Reachable statuses:
+
+* up
+* slow
+* degraded
+
+These must not increase consecutive failure count.
+
+Failure/down statuses should only happen when the site is actually unreachable, such as DNS failure, timeout, TCP failure, connection failure, or fetch failure.
+
+## Monitoring engine
+
+The backend has a monitoring scheduler that runs automatically.
+
+It should:
+
+* check enabled sites periodically
+* use a configurable interval with `MONITOR_INTERVAL_MS`
+* avoid checking too many sites at once
+* run checks with safe concurrency
+* log monitoring events
+* update check history
+* update incidents when needed
+
+## Bulk import behavior
+
+The app supports bulk importing many sites.
+
+Bulk import should:
+
+* parse many sites from text or file
+* detect duplicates
+* report invalid rows
+* add valid sites
+* queue initial checks slowly instead of checking all sites at once
+* avoid false down statuses caused by too many simultaneous checks
+
+## Incident behavior
+
+The app creates incidents when real failures happen.
+
+Incidents are used to show:
+
+* which site has a problem
+* severity
+* failure count
+* when it started
+* whether it is open, acknowledged, or resolved
+
+Incidents should not be created just because SSL is expiring soon unless the design explicitly creates a warning-type incident. SSL expiring soon should usually be degraded/warning, not down.
+
+## Dashboard behavior
+
+The dashboard shows:
+
+* total monitored sites
+* up/down/slow/degraded counts
+* average uptime
+* average response time
+* open incidents
+* critical incidents
+* latency trend chart
+* recent activity
+* monitored sites table
+* SSL expiring soon warnings
+* open incident notification badge
+* manual “Run Check for All Sites” button
+
+The dashboard also supports:
+
+* selecting multiple sites
+* deleting selected sites
+* deleting individual sites
+* running manual checks
+
+## Site detail page
+
+Each site has a detail page showing:
+
+* current status
+* URL / host
+* last checked time
+* response time
+* uptime
+* incident state
+* recent checks
+* DNS details
+* SSL details
+* HTTP diagnostic
+* curl-style probe
+* product/category check
+* CNAME chain
+* diagnostic summary
+
+## Curl-style diagnostic
+
+The app has a curl-style HTTP diagnostic similar to running curl.
+
+It should show:
+
+* original URL
+* final URL after redirects
+* HTTP status code
+* response time
+* redirect count
+* content-type
+* server header
+* status group: 2xx, 3xx, 4xx, 5xx
+* error message if request failed
+
+This is diagnostic-only and should not automatically mark the site down.
+
+## Product/category availability check
+
+The app has an ecommerce check based on the old unixcheck.py logic.
+
+For ecommerce sites, it checks whether product/category pages actually work.
+
+Logic:
+
+* fetch homepage
+* extract links from `<a href="">`
+* find links containing ecommerce patterns:
+
+  * /product
+  * /products
+  * /item
+  * /shop
+  * /store
+  * /category
+  * /categories
+  * /cat
+  * /collection
+  * /collections
+  * /cart
+  * /checkout
+* sample 3–5 URLs
+* test them
+* if at least one returns 200, 301, or 302, mark product check as ok
+* if no links are found, try sitemap fallback:
+
+  * /product-sitemap.xml
+  * /sitemap_products_1.xml
+  * /sitemap.xml
+
+This check is optional per site and should not automatically mark the whole site down.
+
+Possible product check statuses:
+
+* ok
+* warning
+* failed
+* unknown
+
+## DNS diagnostics
+
+The app has DNS diagnostics that show:
+
+* resolver used
+* resolved IP
+* DNS response time
+* A record
+* AAAA record
+* CNAME record
+* CNAME chain
+* resolver status
+* system lookup result
+
+AAAA missing is not necessarily an error. CNAME missing is not necessarily an error. A record or valid resolution is the main important part.
+
+## DNS resolvers
+
+The app supports built-in and custom DNS resolvers.
+
+It should show:
+
+* built-in resolvers
+* custom resolvers
+* add custom resolvers
+* delete custom resolvers
+
+Custom resolvers are used to improve DNS checking, especially when testing from different networks.
+
+## Logs and live console
+
+The app has logs and live console pages.
+
+Logs show:
+
+* level: error, warn, info, debug
+* category: system, monitor, incident, api, dns
+* message
+* site id
+* timestamp
+* details
+
+Live console shows a terminal-like real-time stream of events.
+
+## Telegram alerts
+
+The app has Telegram alert support.
+
+It should use environment variables:
+
+* TELEGRAM_BOT_TOKEN
+* TELEGRAM_CHAT_ID
+
+It should send important alerts only, not spam every minute.
+
+Alerts should be bilingual Persian/English.
+
+Telegram alerts should be sent for important cases such as:
+
+* new critical incident
+* site down
+* DNS failure
+* TCP unreachable
+* repeated HTTP 5xx
+* SSL expiring soon
+* incident resolved
+
+It should have cooldown/deduplication so repeated alerts are not sent constantly.
+
+## API endpoints
+
+The backend exposes API endpoints for:
+
+* listing sites
+* adding a site
+* bulk importing sites
+* deleting a site
+* bulk deleting sites
+* running check for one site
+* running check for all sites
+* getting dashboard summary
+* listing incidents
+* updating incidents
+* listing logs
+* exporting logs
+* DNS diagnostics
+* DNS resolvers
+* curl check
+* product/category check
+* site diagnostics
+* Telegram test/config status if implemented
+
+Important newer endpoints include:
+
+* POST /api/sites/run-check-all
+* POST /api/sites/bulk-delete
+* POST /api/sites/:id/run-curl-check
+* POST /api/sites/:id/run-product-check
+* GET /api/sites/:id/diagnostics
+* DELETE /api/sites/:id
+
+## Environment variables
+
+The app may require:
+
+* DATABASE_URL
+* PORT
+* BASE_PATH for frontend
+* MONITOR_INTERVAL_MS
+* TELEGRAM_BOT_TOKEN
+* TELEGRAM_CHAT_ID
+
+Backend port is usually 8080.
+Frontend is usually 5173.
+
+## Important implementation requirements
+
+Please ensure:
+
+* all OpenAPI changes are reflected in generated clients
+* Drizzle schema changes are pushed to DB
+* frontend and backend response shapes match
+* arrays returned by API are handled safely in the frontend
+* diagnostics failures do not crash the app
+* product check failure does not automatically mean site down
+* SSL expiring soon means degraded/warning, not down
+* degraded is not treated as failure
+* bulk imports do not trigger all checks at once
+* dashboard delete and run-check-all actions work
+* Telegram secrets are never hardcoded
+* code is TypeScript-safe
+* local Windows running issues are avoided where possible

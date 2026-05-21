@@ -1,0 +1,101 @@
+Add the following Monitoring UI and Queue Management improvements:
+
+========================
+1. Full Screen Mode for Monitored Sites
+========================
+
+Add a Full Screen option to the "Monitored Sites" section.
+
+Requirements:
+- Add a clear Full Screen button/icon in the Monitored Sites panel/header.
+- When enabled, the Monitored Sites section should expand to full screen.
+- The user should be able to view all monitored site data with maximum available space.
+- This is especially important for Grid view.
+- In Full Screen mode:
+  - Grid layout should use the available screen width and height efficiently.
+  - Content should remain readable and responsive.
+  - Filters, search, status indicators, and important controls should remain accessible.
+  - Add a clear Exit Full Screen button.
+  - ESC key should exit full screen if possible.
+- Do not break the current normal view.
+- The feature should work smoothly on different screen sizes.
+
+========================
+2. Add "Run Next Cycle" Button
+========================
+
+In the Monitoring Queue section, under the "Next Cycle" subsection, add a new button:
+
+Button label:
+- Run Next Cycle
+
+Behavior:
+- When clicked, it should manually trigger the next monitoring cycle immediately.
+- This should work even if the scheduled next cycle still has remaining time before starting.
+- The logic should reuse the existing next-cycle monitoring process where possible.
+- Do not create duplicate/conflicting cycles.
+
+Disabled State:
+- If monitoring is turned OFF, this button must be disabled.
+- This behavior should match the existing "Run Check on All Sites" button.
+
+UI:
+- Button should be placed clearly inside the Next Cycle subsection.
+- Show loading state while the cycle is being triggered.
+- Show success/error feedback after action.
+
+========================
+3. Allow Re-Adding Site to Queue
+========================
+
+Update the "Add to Queue" behavior for individual sites.
+
+Required behavior:
+- Even if a site is already in the next queue, clicking "Add to Queue" should add it again.
+- The newly added queue item should be placed at the FIRST position in the queue.
+- This allows users to prioritize urgent rechecks.
+
+Implementation notes:
+- Do not block duplicate queue entries for the same site when added manually.
+- Preserve existing queue items.
+- Add the new entry to the front/top of the queue.
+- Ensure queue processing handles duplicate site entries safely.
+
+========================
+4. Audit Log Site Name + Filter Integration
+========================
+
+Enhance Audit Log display and filtering for Site resources:
+
+Display:
+- If the resource is a Site:
+  - Instead of showing only:
+    #24
+  - Show:
+    #24 - digikala
+- Always store `resource_name` at the time of logging.
+- This ensures the name is still available even if the site is deleted later.
+
+Filter Integration:
+- The Audit Log must be connected to the existing Site filter system.
+- If a Site filter exists elsewhere in the system, reuse the same dataset/source.
+- Users should be able to filter Audit Logs by site using the same filter UI/logic.
+- Filtering should work by:
+  - site_id
+  - and/or site_name
+- Ensure consistency between:
+  - Site list
+  - Monitoring sections
+  - Audit Log filters
+
+========================
+5. Testing Scenarios
+========================
+
+Verify:
+- Full Screen mode works correctly (especially Grid view)
+- Run Next Cycle works and respects monitoring ON/OFF state
+- Add to Queue allows duplicates and prioritizes new entries
+- Audit Log shows site names in format: #id - name
+- Audit Log still shows site name after deletion
+- Audit Log filtering by site works correctly and is synced with existing site filters

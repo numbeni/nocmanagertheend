@@ -1,0 +1,104 @@
+Please fully review and improve the Monitoring Queue system without changing the overall project architecture.
+
+Goal:
+The queue should behave like a real, reliable operator queue. The operator must always understand which sites are being checked, which sites are waiting, and which sites were manually added.
+
+Requirements:
+
+1. Queue must always reflect the real monitoring state
+- If the system is checking a site, that site must be visible in the queue.
+- The queue must not appear empty while monitoring work is happening.
+- If no check is currently running, show an Idle or Waiting for next cycle state.
+
+2. Show Current Queue and Next Queue
+- Current Queue: sites being processed in the current monitoring cycle.
+- Next Queue: sites scheduled for the next monitoring cycle.
+- When the Current Queue finishes, the UI must not become empty.
+- The Next Queue should remain visible and ready.
+- Show countdown to next cycle.
+
+Example:
+Next monitoring cycle starts in 2m 30s.
+
+3. Manually add a site to Queue with right-click
+In both List View and Grid View, when the operator right-clicks a site, add this action:
+
+Add to monitoring queue
+
+Behavior:
+- Clicking it adds the site to the queue.
+- If the site is already in the queue, do not add it again.
+- If monitoring is paused, do not allow adding and show a warning.
+- If the site is disabled, do not allow adding.
+
+4. Select multiple sites and add them to Queue
+Add multi-select support.
+
+Expected behavior:
+- In List View, allow selecting multiple sites using checkboxes.
+- In Grid View, allow selecting multiple site cards.
+- After selecting sites, show a bulk action:
+  Add selected to monitoring queue
+
+Rules:
+- Do not add duplicate sites.
+- Do not add disabled sites.
+- If monitoring is paused, cancel the operation and show a warning.
+- Show how many sites were added and how many were skipped.
+
+Example message:
+5 sites were added to the monitoring queue.
+2 sites were already in queue and were skipped.
+
+5. Queue item states
+Each queue item should have one of these states:
+- waiting
+- checking
+- completed
+- skipped
+- failed
+
+6. Queue UI requirements
+- Queue must not make the card grow too large.
+- If there are many items, the queue should scroll internally.
+- Queue items should enter/leave with smooth animations.
+- The currently checking site should be highlighted.
+- Manually added sites should have a badge:
+  Manual
+- Automatically scheduled sites should have a badge:
+  Auto
+
+7. API and Backend
+Add endpoints if needed:
+- GET /api/monitoring/queue
+- POST /api/monitoring/queue/sites
+- POST /api/monitoring/queue/sites/bulk
+
+Backend must:
+- Maintain queue state.
+- Prevent duplicates.
+- Check whether monitoring is paused.
+- Return proper errors for invalid operations.
+
+Example error:
+409 Conflict
+{
+  "error": "monitoring_paused",
+  "message": "Monitoring is paused. Cannot add sites to queue."
+}
+
+8. Quality requirements
+- Keep TypeScript clean.
+- Support both Persian and English UI text.
+- Add translations for all new text.
+- List View and Grid View must have consistent behavior.
+- Right-click must work in both views.
+- Important actions should show confirmations when needed.
+- Queue must be reliable and should not cause UI jumps.
+
+After implementation, explain:
+1. How the queue works now.
+2. How manually adding a site with right-click works.
+3. How multi-select and bulk add to queue works.
+4. What files were changed.
+5. How to test it.

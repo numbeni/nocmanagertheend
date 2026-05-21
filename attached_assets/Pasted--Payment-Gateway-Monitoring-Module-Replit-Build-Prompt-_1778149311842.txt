@@ -1,0 +1,417 @@
+# Payment Gateway Monitoring Module — Replit Build Prompt
+
+You are expanding an existing NOC / Hosting Monitoring platform.
+
+The current system already contains:
+
+* Website monitoring
+* DNS checks
+* HTTP/TCP/SSL monitoring
+* Incident management
+* Diagnostics pages
+* Alert system
+* Dashboard
+* PostgreSQL + Drizzle ORM
+* Frontend operator panel
+* Backend monitoring engine
+
+Your task is to design and implement a NEW module called:
+
+# Payment Gateway Monitoring
+
+The purpose of this module is:
+
+* Monitor the public availability and health of Iranian payment gateways
+* Allow operators to manually or bulk-import payment gateways
+* Link payment gateways to customer websites
+* Show gateway health inside the related website diagnostics section
+* Help operators understand which customer websites are affected when a gateway becomes degraded or unavailable
+
+IMPORTANT:
+This is NOT merchant credential monitoring.
+DO NOT request bank account data, payment credentials, merchant IDs, API secrets, or customer payment access.
+
+This module is Phase 1 only:
+Public gateway health monitoring.
+
+---
+
+# Core Goals
+
+The system should monitor public payment gateway infrastructure such as:
+
+* ZarinPal
+* Zibal
+* NextPay
+* IDPay
+* Vandar
+* Mellat
+* SEP / Saman
+* Sadad
+* Parsian
+* DigiPay
+* Asan Pardakht
+* Other Iranian PSPs
+
+The system should determine:
+
+* Is the gateway reachable?
+* Is DNS healthy?
+* Is SSL healthy?
+* Is the main payment page reachable?
+* Is API latency abnormal?
+* Is the gateway degraded?
+* Is the gateway potentially causing customer website payment failures?
+
+---
+
+# REQUIRED FEATURES
+
+## 1. Payment Gateway Section
+
+Create a dedicated sidebar/menu section:
+
+Payment Gateways
+
+This section must include:
+
+* Gateway list
+* Status overview
+* Health cards
+* Incidents
+* Diagnostics
+* Linked websites
+* Bulk import tools
+
+---
+
+# 2. Manual Gateway Creation
+
+Operators must be able to manually add gateways.
+
+Fields:
+
+* Gateway name
+* Provider type
+* Main domain
+* API endpoint URL
+* Payment page URL
+* DNS hostname
+* Tags
+* Notes
+
+---
+
+# 3. Bulk Import
+
+Operators MUST be able to bulk import gateways.
+
+Supported methods:
+
+* Paste domains list
+* CSV import
+* JSON import
+* Multi-line textarea import
+
+Example:
+
+zarinpal.com
+gateway.zibal.ir
+sep.shaparak.ir
+
+System should automatically:
+
+* detect DNS hostname
+* normalize URLs
+* classify gateway type if possible
+
+---
+
+# 4. Gateway Health Checks
+
+Implement automated checks:
+
+## DNS Check
+
+* resolve gateway domain
+* detect timeout/failure
+
+## SSL Check
+
+* certificate validity
+* expiration
+* issuer
+* chain issues
+
+## HTTP/API Reachability
+
+* response status
+* latency
+* timeout detection
+
+## Payment Page Reachability
+
+* ensure payment page loads
+* detect major outages
+
+## Gateway Status Logic
+
+Possible statuses:
+
+* UP
+* DEGRADED
+* PARTIAL_OUTAGE
+* DOWN
+* UNKNOWN
+
+---
+
+# 5. Link Gateways To Websites
+
+CRITICAL FEATURE.
+
+Operators must be able to manually link gateways to monitored customer websites.
+
+Example:
+
+mehrankala.com
+uses:
+
+* ZarinPal
+* SEP
+
+This relation is VERY important.
+
+Create:
+
+* UI selector
+* Multi-link support
+* Many-to-many relationship
+
+---
+
+# 6. Website Diagnostics Integration
+
+Inside each monitored website diagnostics page,
+add a new section:
+
+Payment Gateway Diagnostics
+
+Example:
+
+Payment Gateways:
+
+* ZarinPal → UP
+* SEP → DEGRADED
+* Mellat → DOWN
+
+This allows operators to quickly determine:
+
+* Is the customer website issue caused by the gateway?
+* Or is the website itself broken?
+
+This is one of the most important goals of the module.
+
+---
+
+# 7. Affected Websites Detection
+
+When a gateway fails,
+the system should automatically show:
+
+Affected Websites:
+
+* mehrankala.com
+* shopx.ir
+* example-store.ir
+
+This should appear:
+
+* inside gateway details
+* inside incidents
+* inside alerts
+
+---
+
+# 8. Gateway Incidents
+
+Create incidents for gateways.
+
+Example:
+
+* ZarinPal API latency high
+* Mellat SSL expired
+* SEP payment page unreachable
+
+Incidents should include:
+
+* severity
+* timeline
+* diagnostics
+* affected websites
+
+---
+
+# 9. Dashboard Integration
+
+Add dashboard widgets:
+
+* Gateway Health Overview
+* Critical Payment Incidents
+* Degraded Payment Providers
+* Most Used Gateways
+* Affected Customer Websites
+
+---
+
+# 10. Diagnostics Page
+
+Create a dedicated diagnostics page per gateway.
+
+Include:
+
+* DNS results
+* SSL results
+* response history
+* latency graph
+* HTTP status history
+* outage timeline
+* linked websites
+* active incidents
+
+---
+
+# 11. Smart UX / Operator Experience
+
+This is a NOC tool.
+
+The UI MUST prioritize:
+
+* operational clarity
+* severity hierarchy
+* actionable information
+* fast incident visibility
+
+Avoid:
+
+* generic admin dashboard look
+* flat tables everywhere
+* overly colorful UI
+
+Use:
+
+* live status indicators
+* clear severity colors
+* compact but readable layout
+* operator-first workflows
+
+---
+
+# 12. Architecture Expectations
+
+Design this module professionally.
+
+Expected:
+
+* scalable backend structure
+* reusable monitoring engine
+* clean DB schema
+* proper typing
+* maintainable API routes
+* modular frontend components
+
+Prefer:
+
+* reusable monitoring abstractions
+* unified incident engine
+* shared diagnostics patterns
+
+---
+
+# 13. Suggested Database Models
+
+You may improve this architecture if needed.
+
+payment_gateways
+
+* id
+* name
+* provider
+* base_domain
+* api_url
+* payment_url
+* status
+* tags
+* notes
+* created_at
+
+payment_gateway_checks
+
+* id
+* gateway_id
+* check_type
+* status
+* latency_ms
+* response_code
+* error_message
+* checked_at
+
+website_payment_gateways
+
+* website_id
+* gateway_id
+
+payment_gateway_incidents
+
+* id
+* gateway_id
+* severity
+* title
+* description
+* started_at
+* resolved_at
+
+---
+
+# 14. Monitoring Frequency
+
+Suggested:
+
+* DNS: every 5 min
+* SSL: every 30 min
+* HTTP/API: every 1 min
+* Payment page: every 3 min
+
+---
+
+# 15. Important Constraints
+
+DO NOT:
+
+* request merchant credentials
+* process real payments
+* submit bank cards
+* simulate real transactions
+* require customer financial data
+
+This is infrastructure monitoring only.
+
+---
+
+# 16. Final Goal
+
+This module should evolve the platform from:
+
+"Website Monitoring"
+
+into:
+
+"Business Infrastructure Monitoring"
+
+The operator should be able to understand:
+
+* which payment providers are unhealthy
+* which customer websites are affected
+* whether an outage is caused by the website or external payment infrastructure
+
+You have creative freedom to improve the architecture, UI, workflows, incident handling, diagnostics, and operator experience if you can make the module more professional and powerful.

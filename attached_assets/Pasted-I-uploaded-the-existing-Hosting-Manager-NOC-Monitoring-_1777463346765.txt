@@ -1,0 +1,296 @@
+I uploaded the existing Hosting Manager / NOC Monitoring project. Please inspect the current code first and implement the following improvements into the existing architecture. Do not rewrite the whole app. Keep the current backend, frontend, database, monitoring logic, and UI style. Apply clean, minimal, production-friendly changes.
+
+Project context:
+- Backend: Express + TypeScript
+- Frontend: React + Vite
+- Database: PostgreSQL + Drizzle
+- App type: Hosting/NOC monitoring dashboard for operators
+- Existing features: dashboard, monitored sites, incidents, logs, live console, settings, monitoring engine, diagnostics, alerts
+
+Required improvements:
+
+1. Improve Settings page
+
+Make the Settings page more complete and useful for operators/admins.
+
+Add at least these settings:
+
+A) Theme mode
+- Add Light Mode / Dark Mode selector.
+- Persist the selected theme.
+- Apply it to the whole frontend.
+- Respect current design style.
+- Default can be system or light if no setting exists.
+
+B) Monitoring settings
+- Monitor interval setting if already implemented or available.
+- Failure threshold before creating incidents.
+- Recovery threshold before resolving incidents.
+- Timeout setting if safely configurable.
+- Slow response threshold if safely configurable.
+
+C) Alert settings
+- Enable/disable external alerts.
+- Alert language selector if alerting exists.
+- Alert cooldown setting if already supported.
+- Choose which severities should trigger external alerts.
+
+D) Display/UI settings
+- Default dashboard view preference if useful.
+- Preferred language.
+- Auto-refresh interval for dashboard data.
+- Date/time format if easy to add.
+
+Important:
+If some settings are risky to implement fully, add only the safe ones now and explain which ones were skipped.
+Do not hardcode settings.
+Use existing settings storage if available.
+If no settings table exists, add or reuse an app_settings key/value table.
+
+2. Move dashboard widgets into proper sections
+
+Currently dashboard content feels mixed.
+
+Requirement:
+- Keep “Monitored Sites” focused only on the monitored sites list/table.
+- Move charts, recent activity, status distribution, and analytics widgets into their own dashboard sections/cards.
+- Create a clearer dashboard layout, for example:
+  - Overview
+  - Status Charts
+  - Recent Activity
+  - Monitored Sites
+- Do not remove existing data.
+- Just organize it better.
+
+3. Rebuild Live Console
+
+The current Live Console is too similar to Logs. Rebuild it so it shows what the monitoring system is doing behind the scenes in real time or near-real time.
+
+Live Console should NOT just duplicate normal logs.
+
+It should show operational monitoring activity such as:
+- Monitoring cycle started
+- Monitoring cycle completed
+- Current site being checked
+- DNS check started/completed
+- HTTP check started/completed
+- TCP check started/completed
+- SSL check started/completed
+- Product check started/completed if available
+- Incident evaluation started/completed
+- Alert decision made
+- Alert suppressed due to cooldown/threshold/settings
+- Next monitoring cycle scheduled
+
+Console entry examples:
+- “Starting monitoring cycle for 42 sites”
+- “Checking example.com: DNS check started”
+- “Checking example.com: HTTP returned 200 in 420ms”
+- “Checking example.com: SSL expires in 18 days”
+- “Incident not created: failure count 1/2”
+- “Nextcloud alert skipped: alerts disabled”
+- “Monitoring cycle completed in 18.4s”
+
+UI requirements:
+- Clean, readable, operator-friendly.
+- Use timestamps.
+- Use status badges/icons.
+- Auto-scroll option.
+- Pause/resume live updates option.
+- Filter by event type if easy:
+  - cycle
+  - site
+  - dns
+  - http
+  - ssl
+  - tcp
+  - incident
+  - alert
+- Keep Logs page for historical logs.
+- Live Console should be for live internal monitoring actions.
+
+Backend requirement:
+- Add an internal monitoring event stream/store if needed.
+- Prefer lightweight solution.
+- Do not overload database with too many console events unless necessary.
+- If real-time streaming is hard, use polling with a short interval.
+
+4. Show current monitoring target in Dashboard Overview
+
+There is a blinking “monitoring” indicator in dashboard overview.
+
+Next to it, show a short live summary:
+- If a site is currently being checked:
+  “Currently checking: example.com”
+- If multiple steps are available:
+  “Currently checking: example.com — HTTP check”
+- If no site is currently being checked:
+  “Idle — waiting for next monitoring cycle”
+or in Persian UI:
+  “در حال بررسی: example.com”
+  “آماده — در انتظار چرخه بعدی مانیتورینگ”
+
+This should update during monitoring cycles if possible.
+
+5. Improve Persian localization
+
+Many parts of the app are not fully translated. Improve Persian localization across the app.
+
+Requirement:
+- Translate all visible UI strings that have good Persian equivalents.
+- Do not translate technical terms where Persian would be awkward, unless there is a clear common translation.
+- Keep domain names, HTTP status codes, DNS, SSL, TCP, API names unchanged where appropriate.
+- Make Persian professional and operator-friendly, not overly literal.
+
+Examples:
+- Dashboard → داشبورد
+- Incidents → حوادث
+- Logs → لاگ‌ها
+- Settings → تنظیمات
+- Monitored Sites → سایت‌های مانیتور شده
+- Recent Activity → فعالیت‌های اخیر
+- Status Distribution → توزیع وضعیت
+- Live Console → کنسول زنده
+- Down → قطع
+- Up → سالم
+- Slow → کند
+- Degraded → دارای اختلال
+- Blocked → بلاک‌شده
+- Unknown → نامشخص
+- Resolved → حل‌شده
+- Critical → بحرانی
+- Warning → هشدار
+- Healthy → سالم
+
+Also fix any raw translation keys showing in UI, especially:
+- dash.*
+- dash.statusDistribution
+- any label that appears as a translation key instead of real text
+
+6. Make incident creation more logical and less noisy
+
+Currently the app creates incidents too quickly, for example after one DOWN check. This creates too many incidents.
+
+Change the logic to be more reasonable.
+
+Requirement:
+- Do not create an incident after only one failed/down check.
+- Add configurable thresholds:
+  - failureThresholdBeforeIncident
+  - recoveryThresholdBeforeResolve
+- Recommended defaults:
+  - failureThresholdBeforeIncident = 2
+  - recoveryThresholdBeforeResolve = 2
+- Only create incident after repeated failures.
+- Only auto-resolve incident after repeated successful checks.
+- Store or calculate consecutive failure/success counts.
+- Show in UI when an incident was not created yet:
+  “Failure count 1/2”
+- Do not break existing incident history.
+- Make threshold configurable from Settings if possible.
+
+Example:
+Check 1 DOWN:
+- Save check result.
+- Show warning state if needed.
+- Do not create incident yet.
+- Console: “Incident not created: failure count 1/2”
+
+Check 2 DOWN:
+- Create incident.
+- Console: “Incident created after 2 consecutive failures”
+
+Check 1 UP after incident:
+- Do not resolve yet.
+- Console: “Incident not resolved yet: recovery count 1/2”
+
+Check 2 UP:
+- Auto-resolve incident.
+- Save resolvedReason:
+  “Resolved automatically after 2 consecutive successful checks.”
+
+7. Fix dashboard raw labels / dash.* issue
+
+Some dashboard labels show raw keys like:
+- dash.statusDistribution
+- dash.something
+
+Fix all of them.
+
+Requirement:
+- Ensure translation keys exist for both English and Persian.
+- If translation is missing, show a proper fallback label.
+- No raw dash.* keys should be visible in the UI.
+
+8. Optimize page refresh and initial load performance
+
+When refreshing the website, it takes too long to load. Investigate and optimize.
+
+Requirement:
+- Check why initial load is slow.
+- Avoid unnecessary blocking API calls.
+- Avoid refetching too much data at once.
+- Use loading skeletons instead of blank waiting screens.
+- Cache or memoize dashboard data where safe.
+- Use pagination/limits for heavy lists:
+  - logs
+  - incidents
+  - checks/history
+  - recent activity
+- Avoid loading full monitoring history on dashboard refresh.
+- Use separate endpoints/cards if needed so one slow API does not block the whole dashboard.
+- Optimize frontend rendering if large lists cause slowness.
+- Keep dashboard usable while data is loading.
+
+Dashboard should load progressively:
+- First show layout/skeleton.
+- Then overview stats.
+- Then charts.
+- Then recent activity.
+- Then monitored sites.
+
+9. Preserve existing behavior unless explicitly changed
+
+Do not remove:
+- Existing site monitoring
+- Existing diagnostics
+- Existing incident pages
+- Existing logs
+- Existing settings
+- Existing alerts
+- Existing database schema unless migration is needed
+
+Only improve or extend them.
+
+10. API/OpenAPI
+
+If the project uses OpenAPI:
+- Update openapi.yaml for new/changed endpoints.
+- Regenerate typed client if required.
+
+Possible endpoints:
+- GET /api/settings
+- PATCH /api/settings
+- GET /api/monitoring/live-state
+- GET /api/monitoring/console-events
+- GET /api/incidents with threshold/sort support if needed
+
+11. Quality requirements
+
+- Keep TypeScript types clean.
+- Add error handling.
+- Do not expose secrets to frontend.
+- Keep code modular.
+- Keep UI clean and operator-friendly.
+- Do not hardcode Persian/English randomly; use existing i18n system if available.
+- Explain all changed files after implementation.
+
+After implementation, report:
+1. What files were changed.
+2. What settings were added.
+3. What database fields/tables were added.
+4. How Live Console now works.
+5. How incident thresholds work.
+6. How to test Persian localization.
+7. What performance optimizations were applied.
+8. Any limitations or things that need restart to apply.

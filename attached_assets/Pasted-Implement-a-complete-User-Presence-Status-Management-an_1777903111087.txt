@@ -1,0 +1,174 @@
+Implement a complete User Presence, Status Management, and Audit Log enhancement system.
+
+Requirements:
+
+========================
+1. User Presence & Status System
+========================
+
+Add a real-time user status system across the application.
+
+Statuses should include:
+- Online
+- Offline
+- Away
+- In Work Shift
+- Out of Work Shift
+
+1.1 Display Status in UI
+- Show a small status indicator (badge / colored dot / emoji) next to user names.
+- This should be visible:
+  - In the top navigation bar (current user)
+  - Anywhere user identity is shown
+- Use clear colors:
+  - Green → Online
+  - Gray → Offline
+  - Yellow → Away
+  - Blue → In Work Shift
+
+1.2 User-Controlled Status
+- Add a dropdown or popover near the user name.
+- User can manually change their status.
+- Include "In Work Shift" as a selectable option.
+- Persist status in database so it remains after refresh.
+
+========================
+2. Online / Offline Detection
+========================
+
+2.1 On Login
+- Set user status to Online.
+
+2.2 Activity Tracking
+- Track user activity using a heartbeat mechanism.
+- Frontend must send a request every 30–60 seconds to update `last_seen`.
+
+2.3 Auto Offline Logic
+- If no activity is detected for 2 minutes:
+  - Automatically set user status to Offline.
+
+- This logic MUST be enforced in backend (not just frontend).
+
+========================
+3. Auto Logout
+========================
+
+- If a user remains Offline for 30 minutes:
+  - Automatically invalidate their session/token.
+  - Force re-login on next request.
+
+========================
+4. Users Page Enhancements
+========================
+
+- In the Users section:
+  - Add a new column next to "Role"
+  - Display user status (Online / Offline / Away / Work Shift)
+- Use badges or colored indicators.
+- Ensure visibility only for authorized roles.
+
+========================
+5. Database Changes
+========================
+
+Extend users table with fields like:
+- status (string/enum)
+- work_shift_status (optional enum)
+- last_seen_at (timestamp)
+- offline_since (timestamp)
+- session_valid (boolean or token-based control)
+
+========================
+6. Backend Logic
+========================
+
+- Create API endpoint:
+  POST /users/heartbeat
+
+- This updates:
+  - last_seen_at
+  - status = Online (if active)
+
+- Implement background job / scheduler:
+  - Detect users inactive > 2 minutes → set Offline
+  - Detect users offline > 30 minutes → logout
+
+========================
+7. Audit Log Fix & Enhancement
+========================
+
+7.1 Fix Missing Logs
+Ensure ALL important actions are logged, including:
+- create site
+- update site
+- delete site
+- create user
+- update user
+- delete user
+- login
+- logout
+- role changes
+- status changes
+
+7.2 Audit Log Structure
+Each log must include:
+- user_id
+- username
+- action
+- resource_type
+- resource_id
+- resource_name
+- old_value (if applicable)
+- new_value (if applicable)
+- timestamp
+- ip_address (if possible)
+- user_agent (if possible)
+
+========================
+8. Resource Name Improvement
+========================
+
+In Audit Log UI:
+
+- If resource is a Site:
+  - Instead of showing only:
+    #24
+  - Show:
+    #24 - digikala
+
+- Always store resource_name at log time
+  (so it still shows even if resource is deleted later)
+
+========================
+9. Security & Access Control
+========================
+
+- Only authorized users can view Users page.
+- Only authorized roles can see other users’ status.
+- Users can only change their own status.
+- Admins may have override permissions.
+
+========================
+10. Technical Notes
+========================
+
+- Do not break existing functionality.
+- Follow clean architecture.
+- Optimize queries.
+- Ensure near real-time updates.
+- Handle edge cases (inactive tabs, connection drops).
+
+========================
+11. Testing Scenarios
+========================
+
+Verify:
+- Login sets status to Online
+- No activity > 2 min → Offline
+- Offline > 30 min → forced logout
+- Status shows correctly in Users page
+- Status persists after refresh
+- Audit logs record all actions
+- Site names show correctly in logs (#id - name)
+
+Ensure code is clean, maintainable, and production-ready.

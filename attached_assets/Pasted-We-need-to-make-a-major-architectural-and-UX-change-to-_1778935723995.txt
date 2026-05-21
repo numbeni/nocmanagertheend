@@ -1,0 +1,831 @@
+We need to make a major architectural and UX change to the NOC monitoring platform.
+
+This platform is used by a hosting/server company. We host ecommerce websites on multiple internal hosting servers. From now on, the monitoring system must become server-based, sweep-based, and operator-first.
+
+The current flat site monitoring flow is no longer enough. Operators need to understand website health by hosting server, not just by individual websites.
+
+This redesign is not only a UI change. It changes the way monitoring is executed, displayed, prioritized, and trusted.
+
+The system must be designed for real Iranian network conditions, where temporary routing issues, packet loss, ISP instability, and short-lived failures can create false alarms. The goal is to improve both accuracy and operator usability.
+
+Focus on this new server-based monitoring architecture, grid-first dashboard, live monitoring state, and execution model.
+
+Do not rewrite the entire project from scratch. Refactor the existing architecture intelligently and preserve working features where possible.
+
+==================================================
+MAIN GOAL
+
+Transform the monitoring system from:
+
+Flat Website Monitoring
+
+into:
+
+Server-Based Hosting NOC Monitoring
+
+Every monitored website must belong to exactly one hosting server.
+
+The dashboard, monitoring execution logic, status bar, live progress indicators, and site status calculations must all be redesigned around servers.
+
+The main/default operator experience must be Grid View.
+
+Grid View is the primary view of the system.
+
+Compact View and List View must use the exact same underlying site status data and filtering logic as Grid View.
+
+If a site is red/down in Grid View, it must also be down in Compact and List View.
+
+If a site is recovered, slow, degraded, unstable, or up in Grid View, every other view must reflect the same status.
+
+There must be one single source of truth for site status.
+
+Do not create separate status logic for Grid, List, and Compact modes.
+
+==================================================
+
+Grid View Is The Main Product Experience
+==================================================
+
+The monitoring dashboard is designed primarily for Grid View.
+
+Grid View must be the default view.
+
+Grid View should be optimized for:
+
+hosting NOC operators
+wall displays
+server-side teams
+high-density monitoring
+fast visual scanning
+understanding server-level health quickly
+
+Compact View and List View are secondary representations.
+
+They must be consistent with Grid View and must never show different status results.
+
+Implement shared data preparation logic for all views:
+
+server grouping
+site filtering
+site status
+critical/down section
+recovered sites
+paused sites
+manual check results
+monitoring sweep results
+
+All views should consume the same normalized monitoring state.
+
+==================================================
+2. Remove Queue From Main Monitoring Flow
+
+Remove the current queue-based automatic monitoring flow from the main dashboard and monitoring process.
+
+The old queue should no longer control automatic monitoring.
+
+The new automatic monitoring flow must be:
+
+Server-Based Sweep Monitoring
+
+There should be no visible Monitoring Queue section in the main dashboard for this flow.
+
+The system should support:
+
+automatic full sweep
+manual full sweep
+manual single-site check
+manual single-server check if useful
+
+But the main automatic monitoring process must no longer be queue-based.
+
+The execution should be deterministic and easy for operators to understand.
+
+Operators must know:
+
+which server is being checked now
+which site is being checked now
+which phase is running
+when the next sweep will happen
+whether monitoring is paused
+whether manual checks are running
+==================================================
+3. Create Server Model
+
+Create a new server entity.
+
+Each server should have:
+
+id
+code / short label, such as s1, s2, s3
+name, such as mahtaco, iranserver, datacenters
+description / role, such as primaryhosting-svr, legacy-sites-svr
+unique header color
+display order
+optional notes
+created_at
+updated_at
+
+Example display format:
+
+s1 mahtaco: primaryhosting-svr
+s2 iranserver: legacy-sites-svr
+s3 datacenters.com: db-intensive-svr
+s4 cloud hosters: external-cdns-svr
+
+==================================================
+4. Server Management Page
+
+Add a dedicated Servers section/page.
+
+Operators must be able to:
+
+create server
+edit server
+delete server
+change server color
+change server order
+see how many sites are assigned to each server
+
+Do not allow deleting a server if it still has assigned sites, unless the operator reassigns those sites safely.
+
+If a server is deleted and there are no sites left in the system, monitoring must fully stop and no background checks should continue.
+
+==================================================
+5. Every Site Must Belong To A Server
+
+Every monitored website must have a server_id.
+
+Automatic monitoring must NOT start if any site is not assigned to a server.
+
+Before starting automatic monitoring, validate:
+
+at least one server exists
+all monitored sites have server_id
+no unassigned sites exist
+
+If validation fails:
+
+block automatic monitoring
+show a clear warning
+show how many sites are unassigned
+provide an action to assign them
+
+Example message:
+
+Monitoring blocked: 12 sites are not assigned to any server.
+
+Manual single-site checks may still work, but automatic monitoring must remain disabled until all sites are assigned.
+
+==================================================
+6. Add Site Changes
+
+When manually adding a site:
+
+server selection is required
+operator can select an existing server
+operator can create a new server from the same form if needed
+
+The form must not allow creating a monitored site without server assignment.
+
+If no server exists, guide the operator to create one first or allow inline server creation.
+
+==================================================
+7. Bulk Import With Server Assignment
+
+Bulk import must require server assignment for each site.
+
+Create a clear import pattern and show it to the operator.
+
+Supported example format:
+
+domain.com | server-code
+
+Example:
+
+digikala.com | s1
+snapp.ir | s2
+tapsi.ir | s3
+shop.example.ir | mahtaco
+
+The system should:
+
+parse each line
+validate domain
+match server by code or name
+prevent duplicates
+show preview before import
+show errors for invalid lines
+block importing sites without valid server
+
+Optional:
+
+Allow creating missing servers during import, but only if the operator explicitly confirms it.
+
+==================================================
+8. New Monitoring Sweep Logic
+
+Replace the old automatic monitoring process with a server-based sweep.
+
+A full sweep means:
+
+go server by server
+check all sites inside one server
+finish that server
+then move to the next server
+
+Do not mix checks between sites or between servers.
+
+Very important rule:
+
+For each site, run all checks for that site first, then move to the next site.
+
+Correct:
+
+Server s1:
+Site A:
+DNS
+HTTP
+TCP
+Curl / availability check
+Site B:
+DNS
+HTTP
+TCP
+Curl / availability check
+
+Wrong:
+
+DNS for all sites
+HTTP for all sites
+TCP for all sites
+
+The old behavior caused confusion with many sites and must be avoided.
+
+Tests must not overlap in a way that causes unclear or mixed status updates.
+
+This is very important for operator trust.
+
+==================================================
+9. Accuracy For Iranian Network Conditions
+
+The monitoring engine must be optimized for unstable Iranian network conditions.
+
+Do not mark a site as critical down after only one failed check.
+
+Temporary failures should not immediately become critical alerts.
+
+Use confirmation logic:
+
+first server pass
+second pass for down sites inside the same server
+final global down recheck
+
+Only persistent failures should remain in Critical / Down Sites.
+
+This reduces false alarms caused by temporary routing problems, DNS instability, ISP issues, and short connection failures.
+
+The system must balance:
+
+accuracy
+speed
+low false positives
+clear operator feedback
+predictable execution
+==================================================
+10. Server First Pass
+
+For each server:
+
+mark that server as currently checking
+show live indicator on that server header
+show phase:
+
+First try on s1
+
+Then check all sites belonging to that server, one by one.
+
+After all sites of that server are checked:
+
+update site statuses
+update server metrics
+identify down sites in that server
+
+Server metrics must update based on the same status source used by Grid/List/Compact.
+
+==================================================
+11. Server Second Pass For Down Sites
+
+After the first pass of one server finishes:
+
+If any sites are down in that server, run a second check only for those down sites.
+
+Show phase:
+
+Second try on s1 down sites
+
+If a site is still down after the second pass:
+
+move it to the top Critical / Down Sites banner
+keep its server reference
+show a small server badge on the critical card
+
+If the site recovers:
+
+keep it in its server section
+update status normally
+
+This second pass is important because Iranian network conditions can cause temporary false failures.
+
+==================================================
+12. Cooldown Between Servers
+
+After finishing a server, wait a short cooldown before moving to the next server.
+
+Default cooldown:
+
+1 or 2 seconds
+
+This value must be configurable in Settings.
+
+During cooldown, show:
+
+Cooldown before next server: 2s
+
+Then continue to the next server.
+
+This cooldown should also be used as a safe moment for non-critical background tasks where appropriate.
+
+==================================================
+13. Final Global Down Recheck
+
+After all servers have completed their first and second passes:
+
+Run one final recheck on all sites currently shown in the Critical / Down Sites banner.
+
+Show phase:
+
+Last checking on down sites
+
+If a critical site is now Up or Slow:
+
+remove it from Critical banner
+return it to its original server section
+update server metrics
+
+If it is still Down:
+
+keep it in Critical banner
+
+After this final check, the full sweep is complete.
+
+==================================================
+14. Sweep Completion Behavior
+
+When a sweep starts, show:
+
+Monitoring running — sweep started X minutes ago
+
+When a sweep completes, show:
+
+Last sweep completed X minutes ago
+Next sweep in X minutes
+
+The next sweep interval must come from Settings.
+
+Add a button:
+
+Run Full Sweep Now
+
+This button should start a full sweep immediately, even if the next scheduled sweep is not due yet.
+
+If a sweep is already running, prevent duplicate execution and show:
+
+Sweep already running
+
+==================================================
+15. Monitoring Pause Behavior
+
+When monitoring is paused:
+
+no automatic sweep runs
+no background checks run
+no automatic retries run
+no automatic recovery checks run
+no scheduled site checks run
+
+Only manual actions should work:
+
+run check on one site
+run check on one server
+run full sweep manually if explicitly allowed
+diagnostics requested by the operator
+
+The UI must clearly show that monitoring is paused.
+
+Very important:
+
+If monitoring is paused, the system must not continue checking sites in the background.
+
+If all sites are deleted, automatic monitoring must fully stop.
+
+If there are no monitored sites, no background monitoring activity should continue.
+
+If all servers are empty, no sweep should run.
+
+If the site list becomes empty while a sweep is running, stop the sweep safely and clear live execution state.
+
+==================================================
+16. Manual Checks Must Have Higher Priority
+
+Manual checks triggered by an operator must have higher priority than automatic monitoring.
+
+Examples:
+
+manual DNS check
+manual HTTP check
+manual curl check
+manual diagnostics from site detail page
+manual check from DNS section
+manual check from server section
+manual check from any troubleshooting panel
+
+These manual checks are urgent because operators need immediate results.
+
+If the monitoring sweep is running, manual checks should not become slow or blocked behind background tasks.
+
+Implement a high-priority execution path for manual checks if needed.
+
+Recommended priority order:
+
+Manual single-site / single-feature checks
+Manual single-server checks
+Manual full sweep
+Automatic monitoring sweep
+Non-critical scheduled background tasks
+
+Manual operator actions should feel fast and responsive.
+
+==================================================
+17. Live Monitoring State
+
+Operators must always know what the system is doing right now.
+
+Expose and display live monitoring state:
+
+monitoring running or paused
+current sweep id
+current phase
+current server
+current site if possible
+sweep started time
+elapsed time
+next sweep countdown
+cooldown countdown
+final down recheck state
+manual check in progress when applicable
+
+Use WebSocket or SSE so the UI updates live.
+
+The live update rate matters.
+
+Operators must feel the system is actively working.
+
+Do not make the UI feel frozen during long checks.
+
+==================================================
+18. Dashboard Redesign — Server Grouped Grid View
+
+Redesign the Monitored Sites dashboard into a server-grouped accordion system.
+
+Use a clean dark NOC theme.
+
+Global background should be similar to:
+
+#0B111E
+
+The new layout should be dense, compact, professional, and optimized for NOC/server operators.
+
+Grid View is the main/default view.
+
+All status results must be shared with Compact and List views.
+
+==================================================
+19. Top Critical / Down Sites Banner
+
+At the top of Monitored Sites, create a prominent Critical / Down Sites banner.
+
+Only confirmed down sites should appear here.
+
+A site should appear here only after:
+
+first server pass failed
+second server pass failed
+
+And then it may remain there after final global down recheck if still down.
+
+Critical cards:
+
+always red / dark red
+must not inherit server color
+show site name
+domain
+status
+response time
+error summary if available
+small glassmorphism server badge like s1, s2, s3
+
+The server badge color must match the exact server header color.
+
+==================================================
+20. Server Accordion Rows
+
+Below the critical banner, group all non-critical sites by server.
+
+Each server must be an accordion row.
+
+Header format must be:
+
+s1 mahtaco: primaryhosting-svr
+
+Each server header has a unique solid background color.
+
+Example colors:
+
+s1 = green
+s2 = brown / orange
+s3 = slate blue
+s4 = purple
+
+==================================================
+21. Collapsed Server State
+
+When collapsed:
+
+only show the header row
+no empty content block
+no placeholder panel
+no vertical padding underneath
+rows should be tightly stacked
+maximize screen space
+
+The collapsed state must be very dense.
+
+==================================================
+22. Server Header Metrics
+
+On the right side of each server header, show compact metrics:
+
+Total: X
+Up: X
+Slow: X
+Degraded: X
+Unstable: X
+Down: X
+
+Use small compact dots or badges for each metric.
+
+These metrics must update after that server finishes checking.
+
+Metrics must be based on the shared normalized site status used by all views.
+
+==================================================
+23. Expanded Server State
+
+Clicking the server header toggles the accordion.
+
+Use smooth CSS height transition.
+
+Important UI rule:
+
+The expanded content body must NOT inherit the server header color.
+
+The expanded body background must remain the native dark dashboard background.
+
+Inside expanded area, show site cards in a high-density grid.
+
+==================================================
+24. Compact Site Cards In Grid View
+
+Inside expanded server sections, normal grid cards should be small and minimal.
+
+Each normal grid card should show only essential operator data:
+
+status dot
+site name
+domain
+response time in ms
+
+Avoid:
+
+large padding
+large buttons
+unnecessary descriptions
+excessive text
+visual clutter
+
+This view is for fast operator scanning.
+
+==================================================
+25. Compact View Consistency
+
+Compact View must not have separate status logic.
+
+It must use the exact same site statuses as Grid View.
+
+Compact View should be ultra-minimal and color-first.
+
+Each compact tile should show:
+
+site name only
+
+Tile background color should represent site status:
+
+UP = green
+SLOW = yellow/orange
+DEGRADED = amber
+UNSTABLE = purple/blue
+DOWN = red/dark red
+
+Compact View must be suitable for wall display and fast scanning.
+
+==================================================
+26. List View Consistency
+
+List View must also use the same shared site status source as Grid View.
+
+If a site appears down in Grid View, it must appear down in List View.
+
+If a site is recovered in Grid View, it must be recovered in List View.
+
+List View should remain useful for operators who prefer tables.
+
+It may group rows by server or provide server filters.
+
+Use best judgment.
+
+==================================================
+27. Current Execution Indicator In UI
+
+When a server is currently being checked, show on its header:
+
+blinking icon
+animated pulse
+current phase label
+
+Examples:
+
+First try on s1
+Second try on s1 down sites
+Cooldown before next server
+
+For Critical banner:
+
+Last checking on down sites
+
+This must update live.
+
+==================================================
+28. Settings
+
+Add settings for:
+
+automatic sweep interval
+cooldown between servers
+enable / disable monitoring
+check timeout if needed
+retry behavior if needed
+server color defaults if useful
+
+Settings must affect the real monitoring engine, not just UI labels.
+
+==================================================
+29. Existing Sites Migration
+
+Existing sites may not have server_id.
+
+Do not silently assign them to a fake server.
+
+Instead:
+
+show an assignment screen
+show all unassigned sites
+allow bulk assignment
+allow creating servers
+block automatic monitoring until fixed
+==================================================
+30. Backend Requirements
+
+Backend must support:
+
+servers table/model
+site.server_id relation
+server CRUD APIs
+assign site to server API
+bulk import with server assignment
+server-based sweep engine
+live sweep state
+current server tracking
+current site tracking
+current phase tracking
+final down recheck
+manual full sweep trigger
+monitoring pause/resume
+configurable sweep interval
+configurable server cooldown
+stop monitoring safely when no sites exist
+stop monitoring safely when monitoring is paused
+high-priority manual check execution
+shared normalized status model for all views
+
+Disable old queue-based automatic monitoring from the main flow.
+
+==================================================
+31. Frontend Requirements
+
+Frontend must support:
+
+server management page
+server selection during add site
+server creation from add site form
+server-aware bulk import
+server-grouped dashboard grid
+grid as default view
+critical banner
+server accordion rows
+compact site cards
+live execution state
+global monitoring status bar
+Run Full Sweep Now button
+paused monitoring state
+unassigned sites blocking state
+compact view using same statuses as grid
+list view using same statuses as grid
+clear empty states when no sites exist
+clear stopped state when monitoring is paused
+
+Keep:
+
+current dark NOC visual identity
+RTL/Persian support
+responsive behavior
+high-density monitoring style
+==================================================
+32. Empty / Deleted Sites Behavior
+
+If all sites are deleted:
+
+stop automatic monitoring completely
+clear active sweep state
+clear current server/current site indicators
+do not run retries
+do not run scheduled checks
+show a clean empty state
+allow adding new sites and assigning servers
+
+If sites are later added again and assigned to servers, monitoring may resume according to settings.
+
+==================================================
+33. Product Logic For Iranian Hosting Conditions
+
+The system must be designed for unstable Iranian network conditions.
+
+Do not mark a site as critical down after only one failed check.
+
+Use confirmation logic:
+
+first pass
+second pass for down sites inside the same server
+final global down recheck
+
+Only persistent failures should remain in Critical / Down Sites.
+
+This reduces false alarms and makes the system more reliable for real hosting operations.
+
+Also ensure the engine remains fast enough for manual troubleshooting.
+
+Manual checks must not feel delayed by the automatic sweep.
+
+==================================================
+34. Final Goal
+
+Transform the platform into a real server-aware hosting NOC system.
+
+Operators should immediately understand:
+
+which server is being checked now
+which phase is running
+which sites belong to each server
+which server has problems
+which sites are truly down
+when the next sweep will run
+how long the current sweep has been running
+what the system is doing live
+whether monitoring is paused
+whether there are no sites to check
+whether a manual check is running
+
+Do not rewrite the whole project from scratch.
+
+Refactor the existing system intelligently and preserve existing working features wherever possible.
+
+The final result should feel deterministic, live, fast, accurate, dense, and suitable for real server-side NOC operators in Iranian hosting conditions.

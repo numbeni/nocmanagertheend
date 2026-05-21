@@ -1,0 +1,128 @@
+I have imported an existing project from another Replit account into this Replit as a zip/file. The project may be incomplete (missing node_modules, build files, or some generated artifacts).
+
+Your task is to fully reconstruct and run the project EXACTLY as it was, without redesigning or rewriting it.
+
+Important rules:
+- DO NOT rebuild the project from scratch.
+- DO NOT change the architecture.
+- DO NOT remove or replace features.
+- DO NOT rename folders, packages, APIs, or database schema unless absolutely required to fix execution.
+- Only fix what is necessary to make the project run correctly in this environment.
+
+---
+
+### Step 1: Analyze the project
+
+- Inspect the entire folder structure.
+- Detect if this is a monorepo (pnpm workspaces).
+- Identify:
+  - backend (likely Express + TypeScript)
+  - frontend (React + Vite)
+  - shared libraries (lib, db, api)
+  - configuration files (tsconfig, package.json, pnpm-workspace.yaml, drizzle config, etc.)
+
+---
+
+### Step 2: Restore missing dependencies
+
+The uploaded project likely does NOT include:
+- node_modules
+- build/dist files
+- generated clients
+
+Do the following:
+- Use pnpm (NOT npm or yarn)
+- Run:
+  pnpm install
+
+- If workspace is used:
+  make sure all packages install correctly
+
+- If any dependency is missing or broken:
+  fix it minimally without changing architecture
+
+---
+
+### Step 3: Fix environment compatibility (Replit)
+
+- Convert Windows-specific scripts if needed:
+  - set NODE_ENV=development → export NODE_ENV=development
+
+- Ensure backend runs on:
+  PORT=8080
+
+- Use Replit Secrets for:
+  DATABASE_URL
+
+- If database is required:
+  - Use Replit PostgreSQL
+  - Set DATABASE_URL properly
+  - Run existing migration/push commands
+
+---
+
+### Step 4: Database setup
+
+- Detect ORM (likely Drizzle)
+- Run the correct command to sync schema:
+  example:
+  pnpm --filter @workspace/db run push --force
+
+- DO NOT create a new schema
+- Use existing schema files
+
+---
+
+### Step 5: Run the project
+
+- Start backend:
+  pnpm --filter @workspace/api-server run dev
+
+- Start frontend:
+  pnpm --filter @workspace/noc-monitor run dev
+
+- Make sure frontend can communicate with backend
+
+---
+
+### Step 6: Fix missing build/runtime issues
+
+If any error occurs:
+- Fix it minimally
+- Do NOT rewrite code
+- Do NOT replace libraries unless absolutely necessary
+
+Examples:
+- missing env variables → show which ones are required
+- incorrect import paths → fix paths
+- build issues → fix config
+
+---
+
+### Step 7: Validate functionality
+
+Make sure:
+- project installs successfully
+- backend starts without crash
+- frontend loads
+- API works
+- database connects
+- basic features (dashboard, sites, monitoring) load
+
+---
+
+### Step 8: Report
+
+After everything is done, clearly explain:
+
+1. What was missing and how it was fixed
+2. What dependencies were installed
+3. What environment variables are required
+4. What commands are used to run the project
+5. Any limitations or things that still need manual setup
+
+---
+
+### Goal
+
+Reconstruct the project EXACTLY as it was and make it runnable in this Replit environment, with minimal changes and maximum preservation of original structure.

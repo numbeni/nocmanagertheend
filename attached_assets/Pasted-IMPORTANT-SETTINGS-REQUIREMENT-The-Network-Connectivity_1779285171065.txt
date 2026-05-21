@@ -1,0 +1,75 @@
+IMPORTANT SETTINGS REQUIREMENT
+
+The Network Connectivity module must have its own dedicated settings section inside the main Settings page.
+
+This settings section must allow operators to configure all behavior related to connectivity checks.
+
+Required settings:
+
+1. Automatic connectivity check interval
+- Operators must be able to define how often the system automatically runs ping checks while connectivity is ONLINE.
+- Example: every 10 seconds, 30 seconds, 1 minute, etc.
+
+2. Offline retry interval
+- Operators must be able to define how often the system retries ping checks while connectivity is OFFLINE.
+- Example: every 5 seconds, 10 seconds, 30 seconds.
+
+3. Ping timeout
+- Operators must be able to define how long the backend should wait for each ping response before considering it failed.
+- Example default: 3000ms.
+
+4. Ping attempts per target
+- Operators must be able to define how many ping attempts should be made for each target before marking that target as failed.
+- Example default: 2 attempts.
+
+5. Connectivity targets
+- Operators must be able to manage the list of ping targets from Settings as well.
+- They should be able to:
+  - add target
+  - edit target
+  - delete target
+  - enable / disable target
+- These are the domains/IPs that the backend will ping to decide if the application has internet connectivity.
+- The target list must not be hardcoded only.
+
+6. Automatic checks enable/disable
+- Operators must be able to enable or disable automatic connectivity checks.
+
+7. Pause monitoring while offline
+- Operators must be able to decide whether monitoring should automatically pause when connectivity is OFFLINE.
+- Default should be enabled.
+
+8. Offline popup enable/disable
+- Operators must be able to decide whether the offline popup/modal should appear when connectivity is lost.
+- Default should be enabled.
+
+9. Notifications
+- Operators should be able to configure whether connectivity offline/online recovery notifications are sent to Nextcloud/Telegram.
+
+==================================================
+STRICT OFFLINE BEHAVIOR
+==================================================
+
+While global connectivity status is OFFLINE:
+
+- no automatic monitoring sweep should start
+- active sweep should be held at the current checkpoint
+- no site should be marked DOWN due to failed checks
+- no site should be moved to Critical / Down banner
+- no false Nextcloud/Telegram site alerts should be sent
+- no scheduled SSL / Payment / DNS background scan should run unless explicitly manual
+- the system should only continue connectivity retry checks
+- manual connectivity check must remain available
+
+In other words:
+
+When connectivity is OFFLINE, the monitoring platform must enter a safe waiting mode.
+
+The only automatic action allowed while OFFLINE is retrying Network Connectivity checks until at least one ping target responds again.
+
+When connectivity becomes ONLINE again:
+
+- clear the popup/banner
+- resume allowed monitoring activity
+- continue the paused sweep from the saved checkpoint if monitoring was paused by connectivity loss
+- do not resume if monitoring was manually paused by the operator

@@ -1,0 +1,176 @@
+We need to add a realtime Connectivity Terminal / Connectivity Console inside the Network Connectivity section.
+
+The main goal is not just UI decoration — this console should display the real backend connectivity workflow and diagnostics in realtime so operators can see exactly what the monitoring engine is doing behind the scenes.
+
+This console should feel like a live NOC/network diagnostics terminal integrated naturally into the existing dashboard and design system.
+
+You have full creative freedom to design and implement this professionally in a way that best fits the current architecture, UI, UX, layout, animations, and monitoring workflow of the project.
+
+The implementation should prioritize:
+
+* realtime visibility
+* readability
+* operational clarity
+* smooth UX
+* native integration with the current dashboard
+
+The console must stream REAL backend events, not fake/demo logs.
+
+Use the existing realtime infrastructure (SSE/WebSocket/event stream) if available.
+
+The frontend terminal should act as a live renderer for backend connectivity events.
+
+==================================================
+WHAT SHOULD APPEAR IN THE TERMINAL
+==================================
+
+The terminal should display realtime connectivity-related operations such as:
+
+* ping execution
+* DNS resolve attempts
+* target switching
+* retries
+* RTT measurements
+* RTT degradation warnings
+* ONLINE / DEGRADED / OFFLINE transitions
+* sweep pause/resume due to connectivity state
+* connectivity recovery
+* retry countdowns
+* diagnostic checks
+* backend decision flow
+
+Example style of logs:
+
+[13:04:30] ping soft98.ir
+Reply from 172.x.x.x: time=45ms
+
+[13:04:31] Primary connectivity target ONLINE
+
+[13:04:35] ping [www.varzesh3.com](http://www.varzesh3.com)
+Request timeout
+
+[13:04:36] Trying secondary target...
+
+[13:04:40] DNS resolve google.com
+Resolved: 142.x.x.x
+
+[13:04:42] Connectivity state changed:
+ONLINE → DEGRADED
+
+[13:04:45] Retrying in 5s...
+
+==================================================
+OFFLINE / DEGRADED MODE
+=======================
+
+When connectivity becomes OFFLINE or DEGRADED:
+
+* the terminal must stay active
+* retry loops should appear live
+* monitoring pause events should appear
+* checkpoint preservation should appear
+* recovery/resume events should appear
+
+Example:
+
+All primary targets failed
+Connectivity status: OFFLINE
+
+Monitoring paused
+Sweep checkpoint preserved
+
+Retrying connectivity in 5s...
+
+Connectivity restored
+Resuming monitoring sweep...
+
+==================================================
+RTT TRENDING INTEGRATION
+========================
+
+If RTT trending exists, terminal logs should also show latency degradation insights.
+
+Examples:
+
+Connectivity degradation detected
+Average RTT increased from 52ms → 148ms
+
+RTT Trend: rising
+
+The terminal should help operators understand not only whether connectivity exists, but also whether network quality is degrading before full failure occurs.
+
+==================================================
+IMPORTANT IMPLEMENTATION NOTES
+==============================
+
+This should not be a fake/static terminal.
+
+The logs must come from real backend connectivity events and probe execution results.
+
+The terminal should integrate naturally with:
+
+* Network Connectivity page
+* connectivity state machine
+* sweep engine
+* retry logic
+* realtime status updates
+* existing monitoring workflow
+
+==================================================
+UX / DESIGN
+===========
+
+You have freedom to professionally design this terminal so it matches the existing dashboard aesthetic and UX patterns.
+
+Please make it:
+
+* modern
+* readable
+* operationally useful
+* responsive
+* smooth
+* visually integrated with the existing NOC dashboard
+
+Suggested inspirations:
+
+* live monitoring consoles
+* Datadog live tail
+* Grafana live logs
+* network diagnostics terminals
+* verbose curl output
+* Linux/Kali terminals
+
+Support:
+
+* dark mode
+* light mode
+* RTL
+* Persian/English translations
+* realtime updates
+* smooth scrolling
+* auto-scroll behavior
+* collapsible/minimizable behavior if useful
+
+==================================================
+OPTIONAL QUALITY-OF-LIFE FEATURES
+=================================
+
+If appropriate for the architecture/UI:
+
+* clear logs
+* copy logs
+* download logs
+* pause auto-scroll
+* log filtering
+* log severity colors
+* virtualization / log limits for performance
+
+Feel free to implement these in the most professional and maintainable way for this project.
+
+The most important thing is that operators can clearly see:
+
+* what the backend is checking
+* why connectivity changed
+* why monitoring paused/resumed
+* how the system reached ONLINE / DEGRADED / OFFLINE decisions
+* what is happening in realtime behind the scenes

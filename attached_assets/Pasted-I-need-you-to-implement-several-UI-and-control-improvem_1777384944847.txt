@@ -1,0 +1,107 @@
+I need you to implement several UI and control improvements in my NOC monitoring dashboard (React frontend + Node backend).
+
+## 1. System Running Status Indicator (Dashboard Overview)
+
+In the dashboard overview page:
+
+- Add a **live system status indicator** that shows whether the monitoring engine is running or paused.
+
+### Requirements:
+- Show a label like:
+  - "Monitoring: Running" (green, animated pulse)
+  - "Monitoring: Paused" (amber/yellow)
+- This should reflect whether background checks (MONITOR_INTERVAL loop) are active.
+- Use an existing backend signal OR create one:
+  - Either expose an endpoint like `/api/monitor/status`
+  - Or infer from whether polling / scheduler is active
+
+### UI:
+- Place it near the "Run Check on All Sites" button
+- Use a small badge + dot indicator:
+  - Green pulsing dot when active
+  - Yellow static dot when paused
+
+---
+
+## 2. Global Stop Button (Pause Monitoring)
+
+Next to the existing button:
+
+- "Run Check for All Sites"
+
+Add a new button:
+
+- "Pause Monitoring" / "Resume Monitoring"
+
+### Behavior:
+- When clicked:
+  - Toggle a global monitoring state in backend (e.g. `isMonitoringPaused`)
+- Backend should:
+  - Stop automatic interval checks when paused
+  - Resume when unpaused
+
+### Backend Changes:
+- Add:
+  - `POST /monitor/pause`
+  - `POST /monitor/resume`
+  - `GET /monitor/status`
+
+### Logic:
+- When paused:
+  - MONITOR_INTERVAL loop should not execute
+- When resumed:
+  - Loop continues normally
+
+---
+
+## 3. Glass Footer Branding
+
+At the bottom of the dashboard (all pages):
+
+Add a subtle glass-style footer:
+
+### UI:
+- Position: fixed bottom or page bottom
+- Style:
+  - glass / blur background (like backdrop-blur)
+  - low opacity
+  - centered text
+
+### Content:
+
+"Powered by behnia masoumi from unixsee ©"
+
+- Add a small logo icon (can be placeholder)
+- Use soft muted text
+- Should not distract from UI
+
+---
+
+## 4. UX Details
+
+- Buttons should use existing UI system (shadcn)
+- Keep design consistent with dark theme
+- Use icons:
+  - Pause → pause icon
+  - Resume → play icon
+
+---
+
+## 5. Important Notes
+
+- Do NOT break existing functionality
+- Keep polling logic intact
+- Ensure:
+  - No memory leaks
+  - Proper cleanup of intervals
+- Make backend state persistent in memory (no DB required)
+
+---
+
+## Goal
+
+After implementation:
+
+- I can clearly see if monitoring is running
+- I can pause/resume the entire system
+- UI looks more professional with footer branding

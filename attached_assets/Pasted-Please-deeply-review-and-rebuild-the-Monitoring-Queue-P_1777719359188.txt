@@ -1,0 +1,245 @@
+Please deeply review and rebuild the Monitoring Queue + Pause/Resume behavior. The previous fixes are still incomplete.
+
+Do not rewrite the whole project. Only rebuild the monitoring queue/control logic cleanly so it behaves correctly and reliably.
+
+Current bugs:
+
+1. If “Run Check on All Sites” was already started, then I click “Stop/Pause Monitoring”, the system still continues checking sites.
+This is wrong.
+
+2. When monitoring is paused/stopped, bulk import still triggers checks automatically.
+This is wrong.
+
+3. The Queue still does not show the upcoming queued cycle while countdown is running.
+It only shows countdown, but not the actual next queue list.
+This is wrong.
+
+Goal:
+Make Pause/Resume and Queue behave like a real NOC control system.
+
+Required behavior:
+
+1. Pause/Stop Monitoring must stop EVERYTHING
+
+When monitoring is paused/stopped:
+- Stop automatic monitoring cycles
+- Stop queued checks
+- Stop manual “Run Check All”
+- Stop checks triggered by bulk import
+- Stop any scheduled next cycle
+- Stop queue processing
+- Prevent new checks from starting
+
+If a check is already running:
+- Abort it if possible using AbortController or equivalent
+- If it cannot be aborted safely, mark it as cancelled/skipped after it finishes
+- Do not continue to the next site
+
+Important:
+Pause must be enforced in backend, not only frontend.
+
+2. Manual Run Check All must respect pause state
+
+If monitoring is paused/stopped and user clicks Run Check All:
+- Do not start checks
+- Return backend error:
+  409 Conflict
+  {
+    "error": "monitoring_paused",
+    "message": "Monitoring is paused. Start monitoring before running checks."
+  }
+
+Frontend:
+- Disable button if paused
+- Also handle backend 409 and show warning toast/dialog
+
+3. Bulk Import must NOT auto-check when paused
+
+Current issue:
+Bulk import adds sites and then system starts checking them even while paused.
+
+Fix:
+- Bulk import can still import sites if allowed
+- But it must NOT trigger checks while monitoring is paused
+- Newly imported sites should be added to upcoming queue only if monitoring is active
+- If monitoring is paused:
+  - import sites
+  - show message:
+    “Sites imported successfully. Monitoring is paused, so checks were not started.”
+  - queue should not start processing
+
+4. Add a real Monitoring State Manager
+
+Create or improve a centralized monitoring state manager.
+
+It should track:
+- isMonitoringActive
+- isPaused
+- isRunningCycle
+- currentCycleId
+- currentQueue
+- nextQueue
+- currentItem
+- abortController / cancellation token
+- nextCycleStartsAt
+- countdown
+
+All monitoring actions must check this state before running.
+
+No monitoring path should bypass this manager.
+
+5. Rebuild Queue as ideal two-layer queue
+
+Queue must show:
+
+A) Current Queue
+- Items being processed in current cycle
+
+B) Next Queue
+- Items scheduled for upcoming cycle
+
+C) Countdown
+- “Next cycle starts in X”
+
+Important:
+When current queue finishes:
+- Do not let queue become empty
+- Show next queue immediately
+- Keep countdown visible
+- When countdown ends, next queue becomes current queue
+
+6. Show upcoming queue during countdown
+
+This is critical.
+
+If countdown says:
+“Next cycle starts in 2m 30s”
+
+Then UI must also show the list of sites that will be checked in that next cycle.
+
+Do not only show countdown.
+
+7. Queue must always reflect actual work
+
+If any site is being checked, it must appear in queue as:
+checking
+
+If checks are paused/cancelled, items should show:
+skipped or cancelled
+
+Do not allow hidden background checks.
+
+8. Queue item states
+
+Each item should have:
+- waiting
+- checking
+- completed
+- skipped
+- cancelled
+- failed
+
+Also show source:
+- auto
+- manual
+- bulk-import
+
+9. Manual Add to Queue should respect pause
+
+If monitoring is paused:
+- Do not add/start queue processing
+- Either block adding or allow adding only to nextQueue as pending
+- Choose the safest/clearest behavior and explain it
+- Do not start checks
+
+10. Resume behavior
+
+When monitoring resumes:
+- It should not duplicate queue items
+- It should continue cleanly
+- If nextQueue exists, use it
+- If no queue exists, build next queue from enabled sites
+- Restart countdown/cycle cleanly
+
+11. UI requirements
+
+Dashboard Queue section should show:
+- Monitoring status: Running / Paused / Idle
+- Current site being checked
+- Current Queue
+- Next Queue
+- Countdown to next cycle
+- Queue item states
+- Source badges: Auto / Manual / Bulk Import
+
+Queue UI:
+- scrollable if large
+- stable height
+- no layout jumping
+- smooth enter/exit animations
+
+12. API endpoints
+
+Add or fix endpoints if needed:
+
+GET /api/monitoring/state
+GET /api/monitoring/queue
+POST /api/monitoring/pause
+POST /api/monitoring/resume
+POST /api/monitoring/run-all
+POST /api/monitoring/queue/add
+POST /api/sites/bulk
+
+All endpoints that can trigger checks must verify monitoring state.
+
+13. Safety rule
+
+There must be no code path where checks can start while monitoring is paused.
+
+Search the project for all places that call:
+- run check
+- run all
+- bulk import check
+- scheduler
+- queue processing
+- monitoring cycle
+
+Make them all go through the centralized state manager.
+
+14. Testing checklist
+
+After implementation, test:
+
+A) Start Run Check All, then click Pause:
+- current check stops or is marked cancelled
+- no next site starts
+- queue stops
+
+B) Pause monitoring, then Run Check All:
+- blocked with warning
+
+C) Pause monitoring, then Bulk Import:
+- sites import
+- no checks run
+
+D) Countdown visible:
+- next queue list is shown during countdown
+
+E) Resume:
+- queue continues cleanly
+- no duplicate items
+
+F) If a site is checking:
+- it is always visible in queue
+
+15. Report after implementation
+
+Explain:
+1. What caused checks to continue after pause.
+2. What code paths were bypassing pause state.
+3. How the new monitoring state manager works.
+4. How queue current/next cycle works.
+5. How bulk import behaves when paused.
+6. How abort/cancel works.
+7. What files were changed.
+8. How to test the fixed behavior.

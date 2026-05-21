@@ -1,0 +1,79 @@
+Additional fullscreen Monitored Sites UI fixes.
+
+These issues are specifically inside the fullscreen Monitored Sites view.
+
+==================================================
+1. Fix Broken Buttons In Fullscreen Monitored Sites
+==================================================
+
+In the fullscreen version of Monitored Sites, these controls currently do not work correctly:
+
+- Per Page
+- Report
+- Run Check On All Sites
+
+Fix them so they work exactly the same as they do in the normal dashboard view.
+
+Requirements:
+- Per Page must actually change the number/density of displayed sites
+- Report must open/generate the correct report
+- Run Check On All Sites must trigger the correct full monitoring check/sweep
+- handlers must not be disconnected in fullscreen mode
+- fullscreen mode must not create a separate broken UI state
+- avoid duplicated logic between normal view and fullscreen view
+
+Prefer extracting shared control logic into reusable components/hooks.
+
+==================================================
+2. Fix Compact Icon In Fullscreen View
+==================================================
+
+In fullscreen Monitored Sites, the Compact icon currently looks too similar to the Exit Fullscreen icon.
+
+Fix this.
+
+Requirements:
+- Compact mode icon must be visually distinct
+- Exit fullscreen icon must remain clear
+- icons should be understandable without reading text
+- keep visual style consistent with the dashboard
+
+Use a better icon for Compact / Density mode, such as:
+- grid compact icon
+- shrink cells icon
+- density icon
+- layout grid icon
+
+Do not reuse the same/similar icon as exit fullscreen.
+
+==================================================
+3. Redesign Compact Grid Cards
+==================================================
+
+The current compact grid cards do not look good.
+
+In compact mode, simplify the cards drastically.
+
+Compact mode should be color-first and ultra minimal.
+
+Each compact grid square should show only:
+- site name
+
+The square/card background color should represent the status:
+
+- UP = green
+- SLOW = yellow/orange
+- DEGRADED = amber
+- UNSTABLE = purple/blue
+- DOWN = red/dark red
+
+Do not show extra text, buttons, metrics, descriptions, or large spacing in compact mode.
+
+Compact card goals:
+- maximum density
+- very fast visual scanning
+- suitable for fullscreen wall display
+- easy status recognition by color
+- site name remains readable
+
+Normal mode can keep more details, but compact mode should be minimal.

@@ -1,0 +1,518 @@
+We need to rebuild the Network Connectivity feature from scratch because the previous implementation does not match the intended product behavior.
+
+Please inspect the current codebase and the existing Network Connectivity implementation, then remove, refactor, or rebuild it as needed. Do not keep confusing or over-engineered behavior from the previous version if it conflicts with the requirements below.
+
+This feature must become a natural part of the monitoring platform, not just an isolated page. It must integrate cleanly with:
+
+global status bar
+server-based sweep engine
+monitoring pause/resume logic
+Critical / Down false alert prevention
+Network Connectivity sidebar page
+Settings page
+realtime UI updates
+Persian / English translations
+existing dark/light theme
+
+The goal is simple:
+
+The platform must know whether the monitoring application itself has internet access before trusting DOWN results from monitored sites.
+
+==================================================
+CORE PRODUCT LOGIC
+
+The Network Connectivity system must be based on backend-side ping checks.
+
+The backend should run real ping commands against a small predefined list of reliable targets.
+
+Hardcoded default targets:
+
+google.com
+soft98.ir
+varzesh3.com
+
+Important:
+The actual target values may be stored as:
+
+google.com
+soft98.ir
+www.varzesh3.com
+
+Do not store the protocol as part of the ping target because ping should target a hostname/domain, not a URL.
+
+If current data includes:
+
+https://soft98.ir/
+https://www.varzesh3.com/
+
+normalize them internally to:
+
+soft98.ir
+www.varzesh3.com
+
+The UI can display them nicely, but the backend ping command must use only the hostname.
+
+==================================================
+IMPORTANT BEHAVIOR CHANGE
+
+Do NOT run connectivity checks constantly every few seconds while the system is healthy.
+
+We do NOT want permanent aggressive background checking.
+
+Instead, connectivity checks should run in these situations:
+
+After each completed monitoring sweep
+When several consecutive DOWN results happen during live monitoring
+When the operator manually clicks “Run Check” in the Network Connectivity page
+When the system is already OFFLINE, then retry every few seconds until it becomes ONLINE again
+
+This means:
+
+When ONLINE, do not check aggressively all the time.
+Run one connectivity check after each sweep.
+Run an emergency connectivity check if the monitoring engine starts seeing multiple consecutive DOWN results.
+When OFFLINE, retry quickly, for example every 5 seconds.
+==================================================
+PING DECISION RULE
+
+Connectivity decision must be simple:
+
+Run ping checks against the configured targets.
+
+If at least ONE target responds successfully:
+
+global internet status = ONLINE
+
+If ALL targets fail:
+
+global internet status = OFFLINE
+
+Important optimization:
+As soon as one target succeeds, stop checking the remaining targets for that run.
+
+Example:
+
+Check google.com:
+
+if ping succeeds:
+mark Internet = ONLINE
+do not continue pinging soft98.ir and varzesh3.com for this check cycle
+
+If google.com fails:
+
+check soft98.ir
+
+If soft98.ir succeeds:
+
+mark Internet = ONLINE
+stop checking remaining targets
+
+If google.com, soft98.ir, and varzesh3.com all fail:
+
+mark Internet = OFFLINE
+==================================================
+PING IMPLEMENTATION
+
+Use real OS-level ping from the backend.
+
+Linux / Replit / production example:
+
+ping -c 1 -W 3 google.com
+
+Windows example:
+
+ping -n 1 -w 3000 google.com
+
+The code should detect the platform and use the correct ping command.
+
+A target is successful only if the ping command exits successfully.
+
+A target fails if:
+
+ping exits with non-zero code
+command times out
+host cannot be resolved
+target is unreachable
+
+Do not use browser navigator.onLine as the source of truth.
+
+Do not use frontend-only checks as the source of truth.
+
+Do not use TCP / DNS / HTTPS fallback as the main decision logic.
+
+The final global state must be based on ping success/failure.
+
+==================================================
+STATUS BAR REQUIREMENT
+
+The global status bar must show a small Internet status indicator.
+
+Examples:
+
+Internet: Online
+Internet: Offline
+Internet: Checking...
+Internet: Offline — retrying in 5s
+
+This indicator already exists in some form, but it must be rebuilt or corrected to reflect the new backend ping-based logic.
+
+Colors:
+
+Online = green
+Offline = red
+Checking = blue / neutral animated state
+Misconfigured = amber
+Disabled = muted gray
+
+The status bar must update from backend state, not frontend guesses.
+
+==================================================
+NETWORK CONNECTIVITY SIDEBAR PAGE
+
+Rebuild or improve the Network Connectivity sidebar page.
+
+This page should show:
+
+global Internet status
+Online / Offline / Checking
+the configured ping target list
+last result for each target
+last response time if available
+last checked time
+last successful ping time
+last failed ping time
+last error message
+current retry countdown when offline
+manual “Run Check” / “Run Check On All” button
+
+The page must clearly show the three default targets:
+
+google.com
+soft98.ir
+www.varzesh3.com
+
+Operators must be able to run a manual check from this page.
+
+Manual check behavior:
+
+immediately run ping checks
+use the same short-circuit logic:
+stop once one target succeeds
+update global Internet status
+update status bar
+update the target result list
+show checking state while running
+==================================================
+TARGET CONFIGURATION
+
+Although the three default targets should exist by default, the list must still be configurable.
+
+Operators should be able to manage these targets from:
+
+Network Connectivity page
+Settings page, inside a dedicated Network Connectivity settings section
+
+They should be able to:
+
+add target
+edit target
+delete target
+enable / disable target
+
+Each target should have:
+
+id
+name
+hostname/domain
+enabled
+timeoutMs
+lastStatus
+lastResponseTimeMs
+lastCheckedAt
+lastError
+
+Important:
+If the operator enters a URL such as:
+
+https://soft98.ir/
+
+the system should normalize it to:
+
+soft98.ir
+
+for ping execution.
+
+==================================================
+SETTINGS PAGE REQUIREMENTS
+
+Update the Settings page to match the new behavior.
+
+The previous settings from the old implementation should be removed or simplified if they no longer match the new logic.
+
+Create a dedicated section:
+
+Network Connectivity Settings
+
+This section should include:
+
+Enable / disable connectivity checks
+Run connectivity check after each sweep
+default: enabled
+Run emergency connectivity check after consecutive DOWN detections
+default: enabled
+Consecutive DOWN threshold before emergency connectivity check
+example default: 3
+Offline retry interval
+default: 5 seconds
+Ping timeout
+default: 3000ms
+Ping attempts per target
+default: 1 or 2
+Show offline popup
+default: enabled
+Pause monitoring while Internet is offline
+default: enabled
+Send offline / recovery notifications
+optional, if current notification architecture supports it
+Manage connectivity targets
+add / edit / delete / enable / disable targets
+
+These settings must affect real backend behavior, not only UI text.
+
+==================================================
+AFTER EACH SWEEP
+
+After every completed monitoring sweep:
+
+run one Network Connectivity check
+update the global Internet status
+update the status bar
+update the Network Connectivity page
+
+This check should be lightweight.
+
+If one target succeeds, stop the check cycle and mark Online.
+
+==================================================
+EMERGENCY CHECK DURING DOWN SPIKES
+
+During monitoring, if the engine detects multiple consecutive DOWN results, run a Network Connectivity check before trusting those DOWN results.
+
+Example:
+
+If 3 consecutive site checks result in DOWN:
+
+run connectivity check immediately
+if Internet is OFFLINE:
+do not continue marking sites as DOWN
+pause/hold sweep
+show offline popup
+prevent false alerts
+if Internet is ONLINE:
+continue normal DOWN handling
+
+The threshold should be configurable in Settings.
+
+Default suggestion:
+3 consecutive DOWN results.
+
+==================================================
+WHEN INTERNET IS OFFLINE
+
+If all enabled ping targets fail:
+
+Set Internet status = OFFLINE.
+
+Then:
+
+show a red popup/modal warning
+show persistent Internet Offline state in status bar
+pause or hold monitoring sweeps
+preserve current sweep checkpoint
+do not mark additional sites as DOWN
+do not move sites into Critical / Down banner due to this offline state
+do not increase consecutive failure counters due to this offline state
+do not send false Nextcloud / Telegram DOWN alerts
+start automatic retry checks every 5 seconds by default
+allow manual retry from Network Connectivity page
+
+Popup text should clearly explain:
+
+“The application could not ping any of the configured connectivity targets. Monitoring is temporarily paused because the monitoring application appears to be offline.”
+
+The popup should list the checked targets:
+
+google.com
+soft98.ir
+www.varzesh3.com
+
+The popup should say that the system is retrying automatically.
+
+==================================================
+OFFLINE RETRY MODE
+
+When Internet status is OFFLINE:
+
+The only automatic activity that should continue is Network Connectivity retry checking.
+
+Retry interval:
+
+default: every 5 seconds
+configurable from Settings
+
+Retry behavior:
+
+ping targets one by one
+stop immediately when one target succeeds
+if one target succeeds:
+status becomes ONLINE
+offline popup closes
+status bar updates
+monitoring may resume from checkpoint if it was paused by connectivity loss
+==================================================
+WHEN INTERNET RETURNS ONLINE
+
+As soon as one enabled target responds successfully:
+
+set Internet status = ONLINE
+close offline popup
+stop offline retry loop
+update status bar
+update Network Connectivity page
+resume monitoring from previous checkpoint if monitoring was paused because of connectivity loss
+
+Important:
+If monitoring was manually paused by the operator, do not auto-resume it just because Internet returned.
+
+Internally distinguish:
+
+pausedByOperator
+pausedByConnectivityLoss
+==================================================
+FALSE ALERT PREVENTION
+
+This is the most important requirement.
+
+When Internet status is OFFLINE:
+
+do not mark monitored sites as DOWN
+do not move sites into Critical / Down banner
+do not increase consecutive failure count
+do not send site DOWN alerts
+do not treat failed checks as real website failures
+do not run normal automatic sweeps
+do not run automatic SSL / Payment / DNS background scans unless explicitly allowed/manual
+
+The platform should enter a safe waiting mode.
+
+The system must distinguish between:
+
+A website is actually down
+The monitoring application has lost Internet connectivity
+==================================================
+POPUP BEHAVIOR
+
+When Internet becomes OFFLINE:
+
+Show a red warning popup/modal.
+
+The popup should include:
+
+Internet Offline title
+explanation
+list of checked ping targets
+last check time
+retry countdown
+manual retry button
+note that monitoring is paused to prevent false DOWN alerts
+
+The popup should not spam repeatedly.
+
+It should appear once and remain visible or minimized until Internet returns.
+
+==================================================
+NOTIFICATIONS
+
+If notification integration is appropriate:
+
+When Internet changes Online → Offline:
+
+send one offline notification
+do not spam repeated notifications
+
+When Internet changes Offline → Online:
+
+send one recovery notification
+
+All timestamps must use Asia/Tehran timezone.
+
+Do not send individual site DOWN alerts while Internet is OFFLINE.
+
+==================================================
+REALTIME UPDATES
+
+Network Connectivity state must update live in:
+
+status bar
+Network Connectivity page
+popup/modal
+monitoring sweep status area
+dashboard indicators if applicable
+
+Use the existing realtime/SSE mechanism if available.
+
+Frontend must consume backend state.
+
+Do not create disconnected local-only frontend state.
+
+==================================================
+UI / UX REQUIREMENTS
+
+The feature must feel native to the current NOC dashboard.
+
+Support:
+
+dark mode
+light mode
+Persian translations
+English translations
+RTL layout
+responsive layout
+existing card/badge styles
+existing status bar style
+
+The operator should immediately understand:
+
+Internet is online or offline
+which target answered
+which targets failed
+when the last check happened
+when the next retry is
+why monitoring is paused
+how to manually retry
+==================================================
+IMPORTANT REBUILD NOTE
+
+If the previous implementation conflicts with this logic, remove or refactor it.
+
+The final desired behavior is:
+
+default hardcoded/seeded targets:
+google.com
+soft98.ir
+www.varzesh3.com
+configurable target list
+backend ping only
+no constant aggressive checks while online
+check after each sweep
+emergency check after consecutive DOWN results
+offline retry every 5 seconds
+stop checking targets as soon as one ping succeeds
+show Internet status in status bar
+show/manage state in Network Connectivity sidebar page
+pause monitoring safely when offline
+prevent false DOWN alerts
+
+Do not overcomplicate it.
+
+Implement this cleanly, professionally, and fully integrated with the existing monitoring architecture.

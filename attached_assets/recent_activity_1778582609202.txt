@@ -1,0 +1,41 @@
+بخش فعلی "Quick Stats" بیش از حد ساده و شبیه یک analytics widget معمولی است و ارزش عملیاتی کافی برای اپراتورهای NOC ندارد.
+
+این بخش را به‌صورت کامل بازطراحی و با یک سکشن بسیار حرفه‌ای‌تر، کاربردی‌تر و جذاب‌تر جایگزین کن.
+
+هدف این است که اپراتور با نگاه کردن به این بخش فوراً بتواند:
+
+* وضعیت کلی زیرساخت را درک کند
+* مهم‌ترین مشکلات فعلی را تشخیص دهد
+* سرویس‌های بحرانی را ببیند
+* تاثیر مشکلات روی سایت‌ها را متوجه شود
+* حس یک NOC واقعی و زنده را تجربه کند
+
+این سکشن نباید شبیه chart یا analytics عمومی باشد.
+باید operational، actionable و infrastructure-focused باشد.
+
+برای طراحی و ایده‌پردازی آزادی کامل داری.
+
+می‌توانی هر چیزی اضافه کنی که به نظرت برای یک پلتفرم مانیتورینگ حرفه‌ای مفیدتر است، مثل:
+
+* infrastructure health overview
+* active incidents
+* affected services
+* unstable providers
+* degraded systems
+* root-cause hints
+* live infrastructure status
+* dependency insights
+* operator-focused summaries
+* realtime infrastructure intelligence
+
+این بخش باید:
+
+* از نظر UI کاملاً هم‌سطح و هماهنگ با Recent Activity باشد
+* از نظر spacing، height، padding و visual weight کاملاً balanced باشد
+* حس realtime و زنده بودن سیستم را منتقل کند
+* مدرن، enterprise-grade و حرفه‌ای باشد
+* با طراحی فعلی داشبورد کاملاً هماهنگ باشد
+
+اگر لازم بود layout، composition، hierarchy یا ساختار داخلی dashboard را هم بهبود بده تا تجربه اپراتوری حرفه‌ای‌تر و cohesiveتر شود.
+
+برای تبدیل این بخش به چیزی بسیار کاربردی‌تر و جذاب‌تر آزادی کامل داری و می‌توانی بر اساس دید خودت نسبت به پروژه بهترین ایده ممکن را پیاده‌سازی کنی.

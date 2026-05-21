@@ -1,0 +1,163 @@
+Please add a keyboard shortcut system and first-time operator help/onboarding to the existing NOC Monitoring app.
+
+Do not rewrite the app. First inspect the current UI, state management, routing, settings, and existing buttons/actions. Then implement the cleanest solution that fits the current architecture.
+
+1. Keyboard shortcut system
+
+Goal:
+Make the NOC console faster for operators to use during real monitoring work.
+
+Add global keyboard shortcuts for common actions.
+
+Suggested shortcuts:
+- F → Toggle fullscreen
+- P → Pause / resume monitoring
+- G → Switch monitored sites to Grid view
+- L → Switch monitored sites to List view
+- R → Refresh dashboard data
+- / → Focus search/filter input if available
+- ? → Open shortcut/help modal
+- Esc → Close open modal/menu/context menu
+- Ctrl/Cmd + K → Open quick command/search palette if easy; otherwise skip or use for help/search
+
+Important behavior:
+- Shortcuts must not trigger while user is typing in:
+  - input
+  - textarea
+  - select
+  - contenteditable fields
+- Shortcuts must respect current permissions/state.
+- If monitoring is paused, actions that require active monitoring should show a warning.
+- Add visual feedback/toast when a shortcut runs.
+- Add translations for shortcut labels in Persian and English.
+- Keep shortcuts configurable later if possible, but fixed shortcuts are acceptable for now.
+
+Suggested implementation:
+- Create a reusable keyboard shortcut hook/module.
+- Example:
+  useKeyboardShortcuts()
+- Keep shortcut definitions centralized.
+- Avoid duplicating key listeners in multiple components.
+- Clean up event listeners correctly.
+
+2. Shortcut help modal
+
+Add a help modal that shows available shortcuts.
+
+Trigger:
+- Press ?
+- Or click a Help / Keyboard Shortcuts button in UI
+
+Content:
+- List each shortcut and what it does.
+- Group shortcuts by category:
+  - Navigation
+  - Monitoring
+  - View
+  - General
+
+Example:
+F — Toggle fullscreen
+P — Pause / resume monitoring
+G — Grid view
+L — List view
+R — Refresh data
+/ — Search
+Esc — Close dialog
+? — Open help
+
+Persian examples:
+F — تمام‌صفحه
+P — توقف / ادامه مانیتورینگ
+G — نمایش شبکه‌ای
+L — نمایش لیستی
+R — بروزرسانی داده‌ها
+/ — جستجو
+Esc — بستن پنجره
+? — راهنما
+
+3. First-time operator help / onboarding
+
+Add a first-time help section or onboarding modal for new operators.
+
+Goal:
+When an operator opens the app for the first time, they should quickly understand how to use the system.
+
+Behavior:
+- Show onboarding/help modal on first visit.
+- Store dismissed state in localStorage or user/app settings.
+- Add a “Don’t show again” option.
+- Add a way to reopen it later from Help / Settings.
+
+Content should explain:
+- What the dashboard shows
+- What monitored sites are
+- What statuses mean:
+  - Up
+  - Down
+  - Slow
+  - Degraded
+  - Blocked
+  - Unknown
+- What incidents mean
+- How Monitoring Queue works
+- How to run a manual check
+- How to pause/resume monitoring
+- How to use List/Grid view
+- How to use right-click context actions
+- How to read Charts & Status
+- Basic keyboard shortcuts
+
+Keep it short, visual, and operator-friendly.
+Do not make it a long documentation page.
+
+Recommended layout:
+- Step-based modal or cards:
+  1. Dashboard overview
+  2. Monitored sites and statuses
+  3. Queue and manual checks
+  4. Incidents and actions
+  5. Charts and reports
+  6. Keyboard shortcuts
+
+4. Add Help entry in UI
+
+Add a visible Help entry:
+- In header/topbar if suitable
+- Or in sidebar
+- Or in Settings
+
+It should open:
+- First-time guide
+- Keyboard shortcuts modal
+
+If you choose one Help modal with tabs, use:
+- Getting Started
+- Keyboard Shortcuts
+
+5. UX requirements
+
+- Help/onboarding should look professional.
+- It should work in light and dark mode.
+- It should support Persian and English.
+- It should not block experienced users forever.
+- It should not appear again after dismissal.
+- It should be easy to reopen.
+
+6. Quality requirements
+
+- Keep TypeScript clean.
+- Do not break existing shortcuts/browser behavior.
+- Do not trigger shortcuts while typing.
+- Use existing i18n system if present.
+- Do not hardcode strings if localization exists.
+- Keep UI responsive.
+- Preserve existing design language.
+
+After implementation, explain:
+1. What shortcuts were added.
+2. Where shortcut logic lives.
+3. How first-time onboarding works.
+4. How users can reopen help.
+5. What files were changed.
+6. How to test the feature.

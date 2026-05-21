@@ -1,0 +1,171 @@
+این پرامپت رو بده به Replit:
+
+```text
+Please improve the current UI layout of the existing Hosting Manager / NOC Monitoring project. Do not redesign the whole app. Keep the current style, but fix the layout and add the requested UX improvements.
+
+Context:
+There is a left sidebar with “NOC Monitor” and navigation items.
+There is a “Charts & Status” page with latency chart and recent activity/status widgets.
+The current Charts & Status layout has too much empty space, poor alignment, and uneven spacing.
+
+Required changes:
+
+1. Collapsible left sidebar
+
+Add the ability for the user to collapse/expand the left sidebar.
+
+Behavior:
+- The sidebar should have an expand/collapse button.
+- When expanded, it shows:
+  - NOC Monitor title
+  - full navigation labels
+  - icons
+- When collapsed, it should shrink to an icon-only sidebar.
+- Similar behavior to Telegram/modern dashboards:
+  - The sidebar becomes narrow.
+  - Icons remain visible.
+  - Labels are hidden.
+  - Tooltips should show the item name on hover if possible.
+- The main content area should automatically expand to the left when the sidebar is collapsed.
+- The collapsed/expanded state should persist in localStorage.
+- It must work in both light and dark mode if theme support exists.
+- It must be responsive and not break mobile layout.
+
+UI expectations:
+- Smooth transition animation.
+- No content overlap.
+- Active menu item should still be clear when collapsed.
+- NOC Monitor logo/title area should become a compact icon/logo in collapsed mode.
+
+2. Improve Charts & Status layout
+
+The Charts & Status page layout is currently not aligned and has too much blank space.
+
+Fix the layout:
+- Make cards aligned in a clean responsive grid.
+- Respect consistent spacing between cards.
+- Avoid huge empty areas inside cards.
+- Use consistent card heights where it makes sense.
+- Charts should have a reasonable height, not stretch unnecessarily.
+- Content should look balanced on desktop screens.
+
+Suggested layout:
+- Top row:
+  - Latency Trend card
+  - Recent Activity card
+- Second row:
+  - Status Distribution card
+  - Response Time Buckets card
+  - Other analytics cards if present
+
+If screen width is small, stack cards vertically.
+
+3. Recent Activity should be scrollable
+
+Move/keep Recent Activity inside Charts & Status, but make it visually balanced.
+
+Requirement:
+- Recent Activity should be in a card next to or near Latency Trend.
+- Its card height should match the Latency Trend card height.
+- Recent Activity content should scroll internally if there are many items.
+- Do not make the whole page overly long just because recent activity has many items.
+- Use a clean empty state if there are no activities:
+  English: “No recent activity.”
+  Persian: “فعالیت اخیری وجود ندارد.”
+
+4. Latency Trend time range selector
+
+Add a time range selector for the Latency Trend chart.
+
+Options:
+- 30 minutes
+- 1 hour
+- 12 hours
+- 24 hours
+- 7 days
+
+Persian labels:
+- ۳۰ دقیقه
+- ۱ ساعت
+- ۱۲ ساعت
+- ۲۴ ساعت
+- ۷ روز
+
+Behavior:
+- User can select the time range.
+- Chart data should update based on the selected range.
+- Default can be 24 hours.
+- The selected range should persist in URL query or localStorage if easy.
+- If backend endpoint currently only returns 24h data, update backend to support a range parameter.
+
+Suggested API:
+GET /api/dashboard/latency-trend?range=30m
+GET /api/dashboard/latency-trend?range=1h
+GET /api/dashboard/latency-trend?range=12h
+GET /api/dashboard/latency-trend?range=24h
+GET /api/dashboard/latency-trend?range=7d
+
+Backend:
+- Filter check history by selected range.
+- Avoid returning too many data points for 7 days.
+- Downsample/group data if needed.
+- Keep response efficient.
+
+Frontend:
+- Add dropdown/select or segmented buttons above the Latency Trend chart.
+- Show loading state while range changes.
+- Keep chart readable.
+
+5. Fix Charts & Status spacing and alignment
+
+Review the entire Charts & Status page.
+
+Fix:
+- inconsistent card widths
+- inconsistent card heights
+- awkward whitespace
+- poor vertical spacing
+- poor horizontal spacing
+- chart card stretching too much
+- legend alignment issues if any
+- mobile responsiveness
+
+The page should feel like a polished dashboard page, not just cards placed randomly.
+
+6. Localization
+
+Add Persian translations for all new UI text.
+
+Translate:
+- Charts & Status → نمودارها و وضعیت
+- Latency Trend → روند تأخیر
+- Recent Activity → فعالیت‌های اخیر
+- Time Range → بازه زمانی
+- 30 minutes → ۳۰ دقیقه
+- 1 hour → ۱ ساعت
+- 12 hours → ۱۲ ساعت
+- 24 hours → ۲۴ ساعت
+- 7 days → ۷ روز
+- Collapse sidebar → جمع کردن منو
+- Expand sidebar → باز کردن منو
+
+Do not show raw translation keys.
+
+7. Quality requirements
+
+- Keep TypeScript clean.
+- Do not break existing navigation.
+- Do not remove existing dashboard data.
+- Do not hardcode language strings if an i18n system exists.
+- Preserve current design style.
+- Make the UI responsive.
+- Keep changes minimal but complete.
+
+After implementation, report:
+1. What files were changed.
+2. How sidebar collapse works.
+3. How Recent Activity scrolling works.
+4. How Latency Trend range filtering works.
+5. Whether backend API was changed.
+6. How to test the layout and responsiveness.
+```

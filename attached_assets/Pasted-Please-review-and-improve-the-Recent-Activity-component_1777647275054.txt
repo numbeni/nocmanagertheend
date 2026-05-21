@@ -1,0 +1,86 @@
+Please review and improve the "Recent Activity" component UI/UX.
+
+Current problem:
+When scrolling inside the Recent Activity card, some items are partially cut off and not fully visible. The scrolling behavior feels unpolished and not professional.
+
+Goal:
+Make the Recent Activity section feel smooth, readable, and production-quality like modern SaaS dashboards.
+
+Requirements:
+
+1. Fix scroll clipping issue
+- No activity item should be partially hidden or cut off.
+- Each item must always be fully visible.
+- Ensure proper vertical spacing and padding so items are not cropped at top or bottom.
+
+2. Improve scrolling behavior
+- Scrolling must feel smooth and natural.
+- Avoid harsh or jumpy scroll behavior.
+- Ensure consistent item height (or predictable spacing if variable).
+- Fix any overflow issues causing visual glitches.
+
+3. Add proper container structure
+- The Recent Activity card should have:
+  - fixed max height
+  - internal scroll (overflow-y: auto)
+- Do NOT let the entire page scroll because of this list.
+- Keep layout stable.
+
+4. Improve item layout
+Each activity item should:
+- have enough vertical padding (not too tight)
+- have clear separation (spacing or divider)
+- avoid text being too close to edges
+- handle long text properly:
+  - wrap text cleanly
+  - no overflow outside container
+  - no text cut-off
+
+5. Scroll snapping (optional but recommended)
+If suitable:
+- Implement soft scroll snapping so each item aligns nicely when scrolling stops.
+- Do NOT make it aggressive or annoying.
+- Keep it subtle and smooth.
+
+6. Custom scrollbar (UI polish)
+- Style scrollbar to match app theme (light/dark)
+- Make it thin and modern
+- Avoid default ugly browser scrollbar if possible
+
+7. Improve visual hierarchy
+- Highlight important parts:
+  - site name
+  - status/error
+- Secondary text (time) should be less prominent
+- Keep alignment consistent
+
+8. Hover interaction
+- Add subtle hover effect on each item
+- Helps readability and interaction feel
+
+9. Performance
+- If list is large:
+  - consider virtualization OR limit number of items (e.g. last 50–100)
+- Avoid rendering hundreds of items at once
+
+10. Responsive behavior
+- Must look good on different screen sizes
+- No layout breaking when container resizes
+
+11. Localization support
+- Ensure text works in both Persian and English
+- Handle longer Persian text without breaking layout
+
+Final goal:
+The Recent Activity section should feel like a polished, modern monitoring dashboard:
+- clean
+- readable
+- smooth scrolling
+- no clipped content
+- no UI glitches
+
+After implementation, explain:
+1. What caused the clipping issue
+2. What changes were made in CSS/layout
+3. How scrolling was improved
+4. Any performance optimizations applied

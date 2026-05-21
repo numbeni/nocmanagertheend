@@ -1,0 +1,489 @@
+I want to improve the DNS part of my existing Hosting Manager / NOC Monitoring project.
+
+Please first inspect the current codebase, current DNS resolver implementation, database schema, monitoring engine, dashboard structure, settings page, API routes, and frontend components.
+
+Do not rewrite the whole project.
+Do not remove existing DNS functionality.
+Preserve the current architecture and improve it cleanly.
+
+Goal:
+Move the existing “DNS Resolvers” management section into Settings, and create a new operational/analytics section called:
+
+DNS Performance
+
+This new DNS Performance section should help operators understand which DNS resolvers are actually performing better based on real monitoring/test data.
+
+Important:
+You should also analyze the current project and, if you find better implementation ideas or useful improvements related to DNS performance, add them in a clean and practical way.
+
+---
+
+## 1. Move DNS Resolvers management into Settings
+
+Currently DNS Resolvers is a separate section/page.
+
+Change this:
+
+- Move DNS resolver management into the Settings page.
+- It should become a Settings subsection/tab, for example:
+  Settings → DNS Resolvers
+
+This section should be used only for managing resolvers.
+
+It should allow:
+- Add resolver
+- Edit resolver
+- Delete resolver
+- Enable/disable resolver
+- Set resolver name
+- Set resolver IP/address
+- Optional description
+- Optional provider name
+- Optional tags
+- Mark resolver as default if the current system supports it
+
+Do not lose existing resolver data.
+
+The old standalone DNS Resolvers navigation item should be removed or replaced with the new DNS Performance page.
+
+---
+
+## 2. Create new section: DNS Performance
+
+Create a new main navigation section/page:
+
+English:
+DNS Performance
+
+Persian:
+عملکرد DNS
+
+This page should be for DNS analysis, ranking, and operational decision-making.
+
+It should NOT be just a resolver settings page.
+
+Purpose:
+Operators should be able to answer:
+- Which DNS resolver is fastest?
+- Which resolver is most stable?
+- Which resolver has the best success rate?
+- Which resolver has the most timeouts?
+- Which resolver works best for each monitored site?
+- Which resolver is unreliable and should maybe be disabled?
+- Is a DNS issue caused by the domain itself or by a bad resolver?
+
+---
+
+## 3. DNS Resolver Ranking Table
+
+Add a ranking table for DNS resolvers.
+
+Suggested columns:
+- Rank
+- Resolver name
+- Resolver IP/address
+- Provider
+- Status
+- Score
+- Success rate
+- Average latency
+- Median latency
+- P95 latency
+- Timeout rate
+- Failure rate
+- Best for sites
+- Worst for sites
+- Last checked
+- Recommendation
+
+Use available data if it already exists.
+If some metrics are not currently stored, implement the minimum required storage/aggregation cleanly.
+
+Status examples:
+- Healthy
+- Slow
+- Unstable
+- High Timeout
+- Failing
+- Disabled
+- Unknown
+
+Persian equivalents:
+- سالم
+- کند
+- ناپایدار
+- تایم‌اوت زیاد
+- ناموفق
+- غیرفعال
+- نامشخص
+
+---
+
+## 4. Resolver Performance Score
+
+Add a clear resolver score, for example:
+
+Resolver Score: 92/100
+
+The scoring formula can be simple and explainable.
+
+Suggested formula:
+- Success rate: 50%
+- Average/P95 latency: 30%
+- Timeout rate: 15%
+- Stability/consistency: 5%
+
+You may adjust the formula if the current data model suggests a better approach.
+
+Important:
+The score should be understandable and not random.
+
+Show a short explanation of why a resolver received its ranking.
+
+Example:
+“Cloudflare ranked #1 because it had 99% success rate, lowest average latency, and lowest timeout rate in the selected time range.”
+
+---
+
+## 5. Per-site best DNS resolver analysis
+
+Add a section/table that shows which resolver performs best for each monitored site.
+
+Suggested columns:
+- Site name
+- Domain/URL
+- Best resolver
+- Best latency
+- Worst resolver
+- Worst latency or error
+- Resolver success comparison
+- Last checked
+
+Example:
+mehrankala.com
+Best resolver: Cloudflare
+Latency: 42ms
+Worst resolver: Local ISP DNS
+Issue: timeout
+
+This is very important for operators.
+
+---
+
+## 6. DNS charts
+
+Add useful charts to DNS Performance.
+
+Suggested charts:
+1. DNS latency comparison by resolver
+2. Success rate comparison by resolver
+3. Timeout rate comparison by resolver
+4. DNS resolve time trend over time
+5. Resolver failure trend
+6. Best resolver distribution across monitored sites
+
+Use the existing chart library/style if the project already has one.
+
+Chart requirements:
+- Clean dashboard card layout
+- Time range selector:
+  - 30 minutes
+  - 1 hour
+  - 12 hours
+  - 24 hours
+  - 7 days
+- Responsive layout
+- Loading states
+- Empty states
+- No huge empty cards
+- Consistent colors:
+  - Green = healthy/success
+  - Yellow = warning/slow
+  - Red = failing/timeout
+  - Blue = normal metrics
+  - Gray = unknown/disabled
+
+---
+
+## 7. Time range selector
+
+Add time range filtering to DNS Performance.
+
+Supported ranges:
+- 30m
+- 1h
+- 12h
+- 24h
+- 7d
+
+The ranking table and charts should reflect the selected range.
+
+Default:
+24h
+
+Avoid returning too much raw data for 7d.
+Use aggregation/downsampling if necessary.
+
+---
+
+## 8. Manual resolver testing
+
+Add useful manual testing actions.
+
+Suggested actions:
+- Test resolver now
+- Test all resolvers
+- Test resolver against selected sites
+- Test selected resolvers against selected sites
+
+The operator should be able to quickly validate whether a resolver works.
+
+Manual test results should show:
+- success/failure
+- latency
+- timeout
+- error message
+- tested site/domain
+- timestamp
+
+Do not allow heavy tests to overload the system.
+Use limits or confirmation if testing many sites/resolvers.
+
+---
+
+## 9. Resolver detail view
+
+If practical, add a resolver details page or expandable row.
+
+It should show:
+- Resolver name
+- IP/address
+- Provider
+- Enabled/disabled
+- Score
+- Success rate
+- Average latency
+- P95 latency
+- Timeout rate
+- Recent failures
+- Best sites
+- Worst sites
+- Recent test results
+- Recommendation
+
+If a full details page is too much, use an expandable table row or modal.
+
+---
+
+## 10. Recommendations and warnings
+
+Add operator-friendly recommendations.
+
+Examples:
+- “This resolver has a high timeout rate. Consider disabling it.”
+- “This resolver is fastest for .ir domains.”
+- “This resolver is unstable in the last 24 hours.”
+- “DNS failures appear across all resolvers, likely domain-side issue.”
+- “Only one resolver failed, likely resolver-side issue.”
+
+Do not make aggressive automatic changes by default.
+Prefer recommendations over auto-disabling.
+
+Optional:
+Add a future-safe setting for auto-disable bad resolvers, but keep it disabled by default if implemented.
+
+---
+
+## 11. DNS test storage / database
+
+Inspect current schema first.
+
+If DNS resolver test results are not stored, add a clean table for resolver performance results.
+
+Suggested table:
+dns_resolver_tests:
+- id
+- resolverId
+- siteId
+- domain
+- success
+- latencyMs
+- errorType
+- errorMessage
+- recordType
+- resolvedAddresses
+- checkedAt
+- source
+  - auto
+  - manual
+
+Use Drizzle style consistent with the project.
+
+Do not store excessive raw data if unnecessary.
+Keep it useful and efficient.
+
+---
+
+## 12. Monitoring engine integration
+
+If the monitoring engine already checks DNS, extend it so resolver performance can be measured.
+
+Important:
+- Do not make monitoring much slower.
+- Avoid testing every resolver against every site too aggressively unless the project can handle it.
+- Use safe limits/sampling if needed.
+- You can test:
+  - all resolvers for selected sites
+  - or enabled resolvers with reasonable concurrency
+  - or sample sites periodically
+
+The goal is useful DNS analytics without overloading the app.
+
+---
+
+## 13. Distinguish domain-side vs resolver-side DNS problems
+
+Add logic where possible:
+
+If all resolvers fail for a domain:
+- likely domain-side DNS problem
+
+If only one resolver fails:
+- likely resolver-side problem
+
+If some resolvers are slow but others are fast:
+- show resolver performance difference
+
+Display this clearly for operators.
+
+Example:
+“DNS issue detected across all resolvers — likely domain configuration problem.”
+
+or:
+“Only Local ISP DNS failed — resolver-specific issue.”
+
+---
+
+## 14. Localization
+
+Add Persian and English translations for all new text.
+
+Important:
+- Do not show raw translation keys.
+- Keep DNS, SSL, TCP, HTTP, IP, P95 as technical terms where appropriate.
+- Persian should be clear and operator-friendly.
+
+Translations:
+DNS Performance → عملکرد DNS
+DNS Resolvers → DNS Resolverها
+Resolver Ranking → رتبه‌بندی Resolverها
+Success Rate → نرخ موفقیت
+Average Latency → میانگین تأخیر
+P95 Latency → تأخیر P95
+Timeout Rate → نرخ تایم‌اوت
+Failure Rate → نرخ خطا
+Best Resolver → بهترین Resolver
+Worst Resolver → ضعیف‌ترین Resolver
+Test Resolver → تست Resolver
+Test All Resolvers → تست همه Resolverها
+Recommendation → پیشنهاد
+Healthy → سالم
+Slow → کند
+Unstable → ناپایدار
+Failing → ناموفق
+Disabled → غیرفعال
+Unknown → نامشخص
+
+---
+
+## 15. UI/UX requirements
+
+The DNS Performance page should feel like an analytics/operations page, not a settings page.
+
+Recommended layout:
+
+Top summary cards:
+- Best resolver
+- Fastest resolver
+- Most stable resolver
+- Worst resolver
+
+Then:
+- Resolver Ranking Table
+
+Then:
+- Charts
+
+Then:
+- Per-site Best Resolver table
+
+Then:
+- Recent DNS test results / recommendations
+
+Make it clean, readable, and useful for operators.
+
+---
+
+## 16. API requirements
+
+Add or update APIs as needed.
+
+Possible endpoints:
+- GET /api/dns/performance
+- GET /api/dns/performance/ranking?range=24h
+- GET /api/dns/performance/sites?range=24h
+- GET /api/dns/performance/charts?range=24h
+- POST /api/dns/resolvers/:id/test
+- POST /api/dns/resolvers/test-all
+- POST /api/dns/resolvers/test-selected
+
+Move resolver management APIs if needed, but preserve compatibility where possible.
+
+If OpenAPI is used:
+- Update openapi.yaml
+- Regenerate typed client if required
+
+---
+
+## 17. Permissions / Auth
+
+If the project has auth/roles:
+- Admin/operator can run resolver tests.
+- Viewer can only view DNS Performance.
+- Admin can manage resolvers in Settings.
+- Operator may view and test, but not delete resolvers unless existing role rules allow it.
+
+Enforce permissions in backend, not only frontend.
+
+---
+
+## 18. Quality and performance
+
+- Keep TypeScript clean.
+- Use existing project conventions.
+- Add proper error handling.
+- Add loading/empty states.
+- Avoid heavy synchronous resolver testing.
+- Use concurrency limits.
+- Avoid database bloat.
+- Keep UI responsive.
+- Do not expose secrets to frontend.
+- Do not break existing monitoring.
+- Do not remove existing resolver functionality.
+
+---
+
+## 19. Final report
+
+After implementation, explain:
+1. What was moved from DNS Resolvers into Settings.
+2. What the new DNS Performance page contains.
+3. What database tables/fields were added.
+4. How resolver scoring works.
+5. How best resolver per site is calculated.
+6. How manual resolver testing works.
+7. How domain-side vs resolver-side issues are detected.
+8. What API endpoints were added/changed.
+9. What files were changed.
+10. How to test the feature.
+11. Any limitations or recommendations for future improvements.

@@ -1,0 +1,175 @@
+These are the frontend/UI changes I want to apply to the dashboard and monitoring interface. Please implement them exactly as described while keeping the current architecture and functionality intact.
+
+---
+
+1. Move monitoring status indicators to the center of the header/status bar
+
+Currently there are two live indicators:
+- Monitoring: Running / Paused
+- Engine idle · XXXXms
+
+Move both of these from their current location to the CENTER of the top header/status bar so operators always have visual access to them.
+
+Requirements:
+- They must stay visible at all times.
+- They should be horizontally centered.
+- Compact and clean badge/pill style.
+- Real-time updates must continue working.
+- The design should match the existing SaaS/NOC dashboard style.
+
+---
+
+2. Replace the Pause Monitoring button with a smart header icon
+
+The current “Pause Monitoring” button inside Dashboard Overview should be removed completely.
+
+Instead:
+- Add a monitoring control icon to the top header/status bar next to the notification/user icons.
+- This icon should represent the CURRENT monitoring state.
+
+Behavior:
+- If monitoring is running → show pause/stop-style icon
+- If monitoring is paused → show play/resume-style icon
+
+Interaction:
+- On hover:
+  - Expand smoothly with animation
+  - Reveal the full action label:
+    “Pause Monitoring”
+    or
+    “Resume Monitoring”
+- On click:
+  - Execute pause/resume action
+- It must still work when sidebar is collapsed.
+- Design should feel modern and compact.
+
+---
+
+3. Optimize the four top Overview cards
+
+Cards:
+- Total Sites
+- Avg Uptime
+- Avg Response Time
+- Open Incidents
+
+Problems:
+- They take too much horizontal width.
+- Their spacing/layout is inefficient.
+
+Required fixes:
+- Reduce overall card width.
+- ALL FOUR CARDS MUST HAVE EQUAL WIDTH.
+- Move secondary details to the second line.
+
+Examples:
+- “6 Up / 3 Down”
+- incident counters
+
+should move to line 2 instead of taking horizontal space.
+
+General improvements:
+- Improve spacing/padding
+- Make cards more compact
+- Keep cards visually balanced
+- Add subtle improvements if useful
+
+---
+
+4. Remove duplicate Overview section
+
+There is another Overview section below the main Overview area.
+
+Remove that lower Overview section completely.
+
+We should only have ONE Overview section in the dashboard.
+
+Also:
+- Remove all extra controls/options/buttons that still exist near the lower Overview section because they were already moved elsewhere previously.
+
+---
+
+5. Sidebar bottom section adjustments
+
+The “Resume Monitoring” and “Add Site” buttons should both move ABOVE the separator line that currently exists above them.
+
+Color requirements:
+- Resume Monitoring button:
+  rgb(42, 106, 216)
+
+- Add Site button:
+  rgb(117, 126, 126)
+
+Keep:
+- rounded corners
+- same size/alignment
+- clean spacing
+- sidebar responsive behavior
+
+---
+
+6. Align sidebar top separator with status bar
+
+The separator line between the sidebar logo/icon area and the TOOLBAR/navigation area should move slightly UPWARD so it aligns exactly with the top status bar/header line.
+
+Goal:
+Create a cleaner visual alignment between sidebar and header.
+
+---
+
+7. Fix monitored sites grid alignment
+
+Currently error descriptions inside monitored site cards cause layout inconsistency.
+
+Fix:
+- Move the error description next to the site name area.
+- Keep a reserved/fixed space for the message.
+
+Result:
+- ALL monitored site cards must remain aligned.
+- UP cards and problem cards should have the same height/layout.
+- No vertical shifting between cards.
+
+Also:
+- Long error text should truncate gracefully.
+- Use tooltip for full message if necessary.
+
+---
+
+8. Fix global theme/color inconsistencies
+
+There are many light/dark theme contrast issues across the app.
+
+Examples:
+- Some charts don’t visually fit dark mode backgrounds.
+- Some text is hard to read.
+- Some cards/badges have poor contrast.
+- Some chart colors conflict with active theme.
+
+Please review the whole frontend and fix these issues properly.
+
+Requirements:
+- Use theme-aware colors.
+- Improve readability in BOTH dark and light mode.
+- Charts must remain readable in all themes.
+- Text contrast must meet good UI standards.
+- Avoid problematic hardcoded colors.
+
+---
+
+Quality requirements:
+- Do not break existing functionality.
+- Keep responsive behavior.
+- Keep sidebar collapse working.
+- Keep TypeScript clean.
+- Keep localization/i18n working.
+- Test in both dark and light mode.
+
+After implementation, explain:
+1. What changed in the header/status bar
+2. How monitoring control icon works
+3. How overview cards were optimized
+4. What duplicate overview section was removed
+5. What sidebar alignment/color changes were made
+6. How monitored site cards were aligned
+7. What theme/contrast fixes were applied

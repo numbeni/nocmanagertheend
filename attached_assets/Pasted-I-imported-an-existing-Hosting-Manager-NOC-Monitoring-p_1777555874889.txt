@@ -1,0 +1,224 @@
+I imported an existing Hosting Manager / NOC Monitoring project from another Replit into this Replit.
+
+First, inspect the uploaded project structure and bring the project up exactly as it currently is. Do not rebuild it from scratch and do not redesign it.
+
+Main goal:
+Run the imported project as-is, preserve the whole architecture and behavior, install any missing dependencies/packages, then apply the requested improvements below.
+
+Project context:
+- App type: Hosting / NOC Monitoring Dashboard
+- Backend: Express + TypeScript
+- Frontend: React + Vite
+- Database: PostgreSQL + Drizzle
+- Monorepo using pnpm workspaces
+- Existing monitoring engine, dashboard, monitored sites, incidents, logs, settings, diagnostics, and localization must be preserved.
+
+Part 1 — Restore and run the imported project
+
+Requirements:
+- Inspect package.json, pnpm-workspace.yaml, lockfile, and project folders.
+- Install missing dependencies that were not uploaded, such as node_modules or generated package artifacts.
+- Use pnpm, not npm or yarn.
+- Do not rename packages, folders, database tables, API routes, or environment variables unless required to fix import/run issues.
+- Keep current code structure.
+- Keep existing UI and features.
+- Only make minimal compatibility fixes required for Replit.
+
+Expected setup:
+- Run pnpm install.
+- Use Replit PostgreSQL if required.
+- Set and use DATABASE_URL from Replit Secrets / database.
+- Use PORT=8080 or the port expected by Replit.
+- Run Drizzle push/migrations using the existing project command.
+- Start backend and frontend using existing scripts.
+- If scripts are Windows-specific, convert only what is needed for Replit/Linux.
+  Example:
+  - Windows: set NODE_ENV=development
+  - Replit/Linux: export NODE_ENV=development
+- Backend should bind to 0.0.0.0 if needed for Replit preview.
+- Frontend should connect correctly to the backend in Replit.
+
+Do not:
+- Do not rewrite the app.
+- Do not replace the stack.
+- Do not remove existing features.
+- Do not hardcode secrets.
+- Do not expose secrets to frontend.
+
+Part 2 — Dashboard restructuring
+
+Currently dashboard has too many mixed sections.
+
+Create a new tab/section named:
+
+English:
+Charts & Status
+
+Persian:
+نمودارها و وضعیت
+
+Move the following items out of the main dashboard/monitored sites area into this new tab:
+- charts
+- status distribution
+- recent activity
+- analytics widgets
+- any dashboard widgets that are not directly related to monitored sites checking/listing
+
+Keep the main Dashboard focused on:
+- overview summary
+- monitored sites
+- monitoring status
+- monitoring queue
+
+Important:
+- Do not delete existing chart/recent activity functionality.
+- Only move and organize it into the new tab.
+- Preserve data and APIs.
+- Make the layout clean and operator-friendly.
+
+Part 3 — Add Monitoring Queue section under Dashboard / Monitored Sites
+
+In the Dashboard, under or near the Monitored Sites section, add a new section:
+
+English:
+Monitoring Queue
+
+Persian:
+صف بررسی مانیتورینگ
+
+This section should show the list of sites waiting to be checked.
+
+Requirement:
+- Show queued sites in order.
+- Show at least:
+  - site name
+  - URL/domain
+  - queue position
+  - current state: waiting / checking / completed / skipped
+- If no sites are queued, show:
+  English: “No sites currently in queue.”
+  Persian: “در حال حاضر سایتی در صف بررسی نیست.”
+- If one site is currently being checked, show it clearly:
+  English: “Currently checking: example.com”
+  Persian: “در حال بررسی: example.com”
+
+Backend:
+- If the monitoring engine already has queue/current state, expose it through an API.
+- If not, add a lightweight in-memory monitoring queue state.
+- Do not store high-frequency queue updates in database unless necessary.
+- Suggested endpoint:
+  GET /api/monitoring/queue
+
+Frontend:
+- Poll this endpoint periodically or reuse existing live state polling.
+- Keep it lightweight.
+
+Part 4 — Fix Run Check All bug when monitoring is stopped
+
+Current bug:
+When monitoring is stopped/paused, clicking “Run Check on All Sites” still starts checking sites. This is incorrect.
+
+Required behavior:
+- If monitoring is stopped/paused and user clicks “Run Check on All Sites”, do NOT start checks.
+- Show a clear warning message.
+
+English warning:
+“Monitoring is currently stopped. Manual check for all sites cannot run while monitoring is stopped. Please start monitoring first.”
+
+Persian warning:
+“مانیتورینگ در حال حاضر متوقف است. تا زمانی که مانیتورینگ متوقف باشد، امکان اجرای بررسی دستی همه سایت‌ها وجود ندارد. ابتدا مانیتورینگ را فعال کنید.”
+
+Backend requirement:
+- Add a server-side guard too.
+- The API endpoint for Run Check All must check monitoring status.
+- If monitoring is stopped, return a proper error response, for example:
+  409 Conflict
+  {
+    "error": "monitoring_stopped",
+    "message": "Monitoring is currently stopped."
+  }
+
+Frontend requirement:
+- Disable the Run Check All button when monitoring is stopped, if possible.
+- Also handle backend 409 error and show toast/dialog warning.
+- Do not rely only on frontend disabling.
+
+Part 5 — Improve Persian localization
+
+Many parts of the site are not translated into Persian.
+
+Requirement:
+- Inspect all visible UI strings.
+- Add missing Persian translations.
+- Fix raw translation keys showing in UI.
+- Do not show keys like:
+  - dash.*
+  - dashboard.*
+  - status.*
+  - common.*
+- Use professional, operator-friendly Persian.
+- Do not translate technical terms awkwardly if the English term is clearer.
+- Keep DNS, SSL, TCP, HTTP, API, URL mostly unchanged unless already translated consistently.
+
+Translate common UI items such as:
+- Dashboard → داشبورد
+- Monitored Sites → سایت‌های مانیتور شده
+- Charts & Status → نمودارها و وضعیت
+- Monitoring Queue → صف بررسی مانیتورینگ
+- Recent Activity → فعالیت‌های اخیر
+- Status Distribution → توزیع وضعیت
+- Incidents → حوادث
+- Logs → لاگ‌ها
+- Settings → تنظیمات
+- Live Console → کنسول زنده
+- Run Check → اجرای بررسی
+- Run Check on All Sites → بررسی همه سایت‌ها
+- Monitoring stopped → مانیتورینگ متوقف است
+- Currently checking → در حال بررسی
+- Waiting → در انتظار
+- Checking → در حال بررسی
+- Completed → تکمیل‌شده
+- Skipped → رد‌شده
+- Up → سالم
+- Down → قطع
+- Slow → کند
+- Degraded → دارای اختلال
+- Blocked → بلاک‌شده
+- Unknown → نامشخص
+- Critical → بحرانی
+- Warning → هشدار
+- Resolved → حل‌شده
+
+Part 6 — API/OpenAPI
+
+If the project uses OpenAPI:
+- Update openapi.yaml for new/changed endpoints.
+- Regenerate typed client if required.
+
+Possible new endpoint:
+- GET /api/monitoring/queue
+
+Changed endpoint:
+- Run Check All endpoint should return 409 if monitoring is stopped.
+
+Part 7 — Quality requirements
+
+- Keep TypeScript types clean.
+- Add error handling.
+- Keep UI consistent with current design.
+- Do not break existing monitoring.
+- Do not remove existing pages.
+- Do not expose secrets to frontend.
+- Avoid heavy polling or unnecessary database writes.
+- Keep changes minimal but complete.
+
+After implementation, report:
+1. How the imported project was restored and run.
+2. What packages/dependencies were installed.
+3. What Replit secrets/environment variables are required.
+4. What files were changed.
+5. What new tab/section was added.
+6. How Monitoring Queue works.
+7. How the Run Check All stopped-monitoring bug was fixed.
+8. What Persian localization improvements were made.
+9. How to test everything.

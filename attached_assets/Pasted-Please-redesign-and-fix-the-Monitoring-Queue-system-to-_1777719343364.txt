@@ -1,0 +1,86 @@
+Please redesign and fix the Monitoring Queue system to behave like a real, continuous, operator-friendly queue.
+
+Goal:
+The queue must always represent the actual monitoring engine state and never feel empty or disconnected.
+
+Core logic:
+
+1. The queue must NEVER appear empty
+- It should always show either:
+  • Current Queue (active checks)
+  • Next Queue (upcoming cycle)
+- If nothing is running, show:
+  “Idle — waiting for next monitoring cycle”
+- Also show countdown:
+  “Next cycle starts in X minutes”
+
+2. Implement two-layer queue system
+- Current Queue:
+  Sites currently being checked
+- Next Queue:
+  Sites scheduled for the next cycle
+- When current queue finishes:
+  - smoothly transition out (animation)
+  - next queue becomes visible immediately
+  - UI must not jump or become empty
+
+3. Queue must reflect real engine behavior
+- If a site is being checked → it MUST appear in queue
+- No hidden or invisible processing
+- Queue = single source of truth for monitoring activity
+
+4. Queue flow should be continuous (playlist-like)
+- Behave like a music playlist:
+  items move forward
+  no hard reset between cycles
+  no visual “reset to empty”
+
+5. Queue item states
+Each item must have a clear state:
+- waiting
+- checking (highlight this)
+- done
+- skipped
+- failed
+
+6. Manual interaction
+- Add right-click action:
+  “Add to queue”
+- Support multi-select:
+  “Add selected to queue”
+- Prevent duplicates
+- Prevent adding when monitoring is paused
+
+7. Visual indicators
+- Highlight currently checking site
+- Show badges:
+  • Manual (user-added)
+  • Auto (system)
+- Keep UI clean and readable
+
+8. Layout behavior
+- Queue must NOT grow infinitely
+- Make it scrollable if large
+- Keep fixed height container
+- Avoid layout shifting
+
+9. Smooth animations
+- When items enter/leave queue → smooth transitions
+- No jumpy UI
+
+10. Respect monitoring state
+- If monitoring is paused:
+  - no execution
+  - no queue updates
+  - disable manual queue actions
+
+Final requirement:
+The queue should feel like a live operational control panel:
+- always visible
+- always accurate
+- continuous
+- predictable
+- operator-friendly
+
+Do not rewrite the whole system.
+First inspect existing logic, then fix and improve it cleanly.

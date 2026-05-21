@@ -1,0 +1,59 @@
+modules = ["nodejs-20", "web", "python-3.12"]
+
+[deployment]
+router = "application"
+deploymentTarget = "autoscale"
+run = ["bash", "-c", "PORT=5000 pnpm --filter @workspace/api-server run start"]
+build = ["bash", "-c", "pnpm install && BASE_PATH=/ PORT=5000 pnpm --filter @workspace/noc-monitor run build && pnpm --filter @workspace/api-server run build"]
+
+[deployment.postBuild]
+args = ["pnpm", "store", "prune"]
+env = { "CI" = "true" }
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "BASE_PATH=/ PORT=5000 pnpm --filter @workspace/noc-monitor run build && PORT=5000 pnpm --filter @workspace/api-server run dev"
+waitForPort = 5000
+
+[agent]
+stack = "BEST_EFFORT_FALLBACK"
+expertMode = true
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 20000
+
+[userenv]
+
+[userenv.shared]
+PORT = "5000"
+
+[nix]
+channel = "stable-25_05"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 8081
+externalPort = 8081

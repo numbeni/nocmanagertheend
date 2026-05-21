@@ -1,0 +1,182 @@
+You are working on my Hosting Manager Suite project.
+
+Goal:
+Add useful monitoring features from the uploaded utility scripts into my existing app, without breaking the current architecture.
+
+Important:
+Do not hardcode secrets. Use environment variables.
+
+Environment variables:
+TELEGRAM_BOT_TOKEN
+TELEGRAM_CHAT_ID
+
+Telegram channel:
+Use TELEGRAM_CHAT_ID from env. It may be a channel username like @unixseehostingmanager or a numeric chat id.
+
+Required features:
+
+1. Telegram Alert System
+Add Telegram notifications for important events only.
+Do NOT send messages every minute.
+Send alerts only when:
+- a new critical incident is created
+- a site changes from up/slow to down
+- SSL expires in 7 days, 3 days, or 1 day
+- DNS completely fails
+- HTTP returns 5xx repeatedly
+- TCP port 80 or 443 is unreachable repeatedly
+- a previously critical incident is resolved
+
+Messages must be bilingual: Persian and English.
+
+Example Telegram message:
+
+🚨 Critical Hosting Alert
+
+🌐 Site: example.com
+⚠️ Status: Down
+🧩 Cause: DNS Failure
+🕒 Time: 2026-04-25 14:30
+📌 Action: Check DNS records and nameservers.
+
+————
+
+🚨 هشدار مهم هاستینگ
+
+🌐 سایت: example.com
+⚠️ وضعیت: قطع
+🧩 علت احتمالی: مشکل DNS
+🕒 زمان: 2026-04-25 14:30
+📌 اقدام پیشنهادی: رکوردهای DNS و نیم‌سرورها بررسی شوند.
+
+Telegram requirements:
+- Create a reusable telegram service/module.
+- Use fetch or axios to call Telegram Bot API.
+- Support long messages by splitting them safely.
+- Avoid duplicate spam by storing last alert time or alert fingerprint.
+- Add cooldown per site + alert type, for example 30 minutes.
+- Log Telegram send failures but do not crash the monitor.
+
+2. Important Report Summary
+Add a function that creates a short important-only report for operators.
+This report should include:
+- currently down sites
+- SSL certificates expiring soon
+- DNS failures
+- repeated HTTP 5xx
+- unresolved critical incidents
+
+This report should be sent only when there is something important.
+Do not send “everything is OK” messages unless manually requested.
+
+3. Product Page Checker
+Add a checker that determines whether a website appears to have active product pages.
+Logic:
+- Fetch the homepage.
+- Search links containing common product/shop patterns:
+  /product/
+  /products/
+  /shop/
+  /item/
+  /store/
+  /cart/
+  /checkout/
+- If no product links are found, try common sitemaps:
+  /product-sitemap.xml
+  /sitemap_products_1.xml
+  /sitemap.xml
+- Test a small sample of discovered product URLs.
+- Return:
+  productPagesFound: boolean
+  sampleProductUrls: string[]
+  productCheckStatus: "ok" | "warning" | "failed" | "unknown"
+  productCheckMessage
+
+This feature should be optional per site, because not every monitored site is a shop.
+
+4. Better DNS Check
+Improve DNS diagnostics:
+- Check A record
+- Check AAAA record
+- Check CNAME
+- Follow CNAME chain safely with a max depth
+- Return DNS resolver-friendly diagnostic info
+- Detect:
+  no_dns_record
+  cname_loop
+  only_ipv6
+  dns_ok
+  dns_partial_failure
+
+Expose this information in the site detail page.
+
+5. CNAME Chain Viewer
+In the site detail page, show the CNAME chain if available.
+
+Example:
+www.example.com → example.cdn.net → edge.provider.net
+
+6. Curl-style HTTP Diagnostic
+Add a simple operator-friendly HTTP summary:
+- final URL after redirects
+- status code
+- response time
+- redirect count
+- content type
+- server header if available
+- whether the result is 2xx, 3xx, 4xx, or 5xx
+
+Show this in the site detail page.
+
+7. UI Changes
+Update the frontend carefully:
+- Add a “Diagnostics” section to the site detail page.
+- Show DNS details, CNAME chain, HTTP diagnostic, SSL expiry, and product page status.
+- Add a “Send test Telegram alert” button in settings or admin area.
+- Add a small “Telegram configured / not configured” status indicator.
+- Do not expose the bot token in the frontend.
+
+8. Backend/API Changes
+Add or update API endpoints if needed:
+- GET /api/sites/:id/diagnostics
+- POST /api/sites/:id/run-product-check
+- POST /api/admin/test-telegram-alert
+
+Keep OpenAPI updated if this project uses an OpenAPI contract.
+Regenerate the typed client if needed.
+
+9. Database Changes
+If needed, add fields/tables for:
+- telegram alert history / fingerprint / cooldown
+- product check enabled flag
+- latest product check result
+- DNS diagnostic snapshot
+- HTTP diagnostic snapshot
+
+Use the existing database migration style of the project.
+
+10. Alert Deduplication
+Prevent Telegram spam.
+Before sending an alert, create an alert fingerprint like:
+siteId + alertType + rootCause + severity
+
+Only send again if:
+- status changed
+- severity increased
+- cooldown passed
+- incident was resolved
+
+11. Safety and Quality
+- Do not break existing monitoring.
+- Keep code modular.
+- Add error handling.
+- Add logs.
+- Add TypeScript types.
+- Keep UI simple and operator-friendly.
+- Persian text should be clear and professional.
+- English text should be concise and operational.
+
+After implementing:
+- Explain what files were changed.
+- Explain how to set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in Replit Secrets.
+- Provide a short test checklist.

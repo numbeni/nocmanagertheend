@@ -1,0 +1,142 @@
+Please improve the project by adding two main features: Admin/Audit Log and a Browser Notification system.
+
+Before implementing, review the existing architecture, auth system, roles, monitoring logic, and settings.
+
+Do not rewrite the whole project. Keep everything clean, consistent, and production-ready.
+If you find a better way to implement these features, feel free to improve the design.
+
+---
+
+## 1. Admin / Audit Log
+
+Add a new section:
+
+Name:
+- English: Audit Log (or Admin Log)
+- Persian: لاگ مدیریتی
+
+Goal:
+Admins and managers should be able to see what actions users (except viewers) have performed.
+
+Track actions such as:
+- user login / failed login / logout
+- user created / updated / disabled / role changed
+- site added / edited / deleted
+- bulk import
+- incident created / resolved
+- settings changed
+- DNS resolver changes
+- notification settings changes
+
+Each log should include:
+- timestamp
+- user (name + role)
+- action type
+- entity (site/user/settings/etc)
+- description (human readable)
+- severity (info / warning / critical)
+- ip address (if possible)
+
+Backend:
+- Create audit_logs table if needed
+- Add a reusable logging function/service
+- Do not store sensitive data (passwords, secrets)
+
+Frontend:
+- Create Audit Log page
+- Add filters:
+  - by user
+  - by action type
+  - by date
+- Add search + pagination
+- Only admin/founder can access
+
+---
+
+## 2. Browser Notification System
+
+Add browser notifications for alerts.
+
+Add a Notifications section in Settings:
+
+User can:
+- Enable/disable notifications
+- Request browser permission manually
+- Enable/disable sound
+- Choose which alerts trigger notifications:
+  - Critical incidents
+  - Site down
+  - Site recovered
+  - SSL warning
+  - DNS failure
+  - HTTP errors
+- Filter by severity:
+  - Critical only
+  - Warning + Critical
+  - All
+
+Optional:
+- Quiet hours (Do Not Disturb)
+- Test notification button
+
+Behavior:
+- Ask permission only when user clicks enable
+- Do not auto-request permission
+- Show permission status (granted / denied / default)
+- Do not spam notifications
+- Deduplicate repeated alerts
+
+Notification example:
+Title:
+“Critical Incident”
+
+Body:
+“example.com is DOWN — DNS timeout”
+
+Support Persian and English.
+
+If real-time events exist (WebSocket/SSE), use them.
+Otherwise use efficient polling.
+
+---
+
+## 3. Permissions
+
+- Admin/Founder:
+  - full access to audit log
+  - manage notification defaults
+- Operator:
+  - use notifications
+  - limited access to logs (optional)
+- Viewer:
+  - no access to audit log
+
+Enforce permissions in backend.
+
+---
+
+## 4. Localization
+
+Add Persian and English translations for all new UI.
+
+---
+
+## 5. Quality
+
+- Clean TypeScript
+- No sensitive data in logs
+- No notification spam
+- Responsive UI
+- Proper error handling
+- Do not break existing features
+
+---
+
+## 6. Final Report
+
+After implementation, explain:
+- What was added
+- How audit logging works
+- What is logged
+- How notifications work
+- How to test both features

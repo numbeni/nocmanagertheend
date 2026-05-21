@@ -1,0 +1,153 @@
+Please apply these exact dashboard/sidebar UI fixes.
+
+Do not redesign the whole app. Only fix the following UI details exactly.
+
+---
+
+## 1. Remove the extra open incidents shortcut button
+
+There is an extra red outlined button under the top status bar / header area, related to incidents.
+
+It looks like this in the DOM:
+
+<button ... title="View open incidents"> ... 2 open ... </button>
+
+It has:
+- triangle alert icon
+- text like “2 open”
+- chevron-right icon
+- destructive/red outline styling
+- title: “View open incidents”
+
+Please remove this button completely from the dashboard/header/status area.
+
+Important:
+- Do NOT remove the Open Incidents overview card.
+- Only remove this extra shortcut button under the status bar/header.
+
+---
+
+## 2. Sidebar bottom actions must match the reference exactly
+
+At the bottom of the sidebar, create a fixed bottom action area exactly like the reference image.
+
+Order from top to bottom:
+
+1. Resume Monitoring / Pause Monitoring button
+2. Add Site button
+3. Divider line
+4. Language selector
+
+Design requirements:
+
+### Resume/Pause Monitoring button
+- Full width inside sidebar bottom area
+- Blue background
+- White text
+- Left icon
+- Rounded rectangle
+- Same visual weight as reference
+- Text example:
+  Resume Monitoring
+  or
+  Pause Monitoring
+
+### Add Site button
+- Full width inside sidebar bottom area
+- Dark gray / neutral background
+- White or high-contrast text
+- Plus icon on the left
+- Rounded rectangle
+- Placed directly below Resume/Pause button
+- Same width as Resume/Pause button
+
+### Divider
+- Thin horizontal separator line
+- Placed below Add Site
+- Small vertical spacing
+
+### Language selector
+- Full width selector at the very bottom
+- Light/neutral card-like background
+- Left language icon
+- Text: Language
+- Dropdown arrow on right
+- Same width alignment as buttons above
+
+Spacing:
+- Keep this bottom area visually separated from the main navigation.
+- Use consistent padding.
+- Match the reference image as closely as possible.
+- Keep it clean and compact.
+
+Collapsed sidebar:
+- Show only icons.
+- Show tooltips on hover.
+- Keep the same order.
+
+---
+
+## 3. Increase toolbar item spacing slightly
+
+In the sidebar navigation/tools list, increase spacing between toolbar/menu items slightly.
+
+Goal:
+- Items should breathe more.
+- Do not make the sidebar too tall.
+- Just add a subtle increase in vertical gap/padding.
+
+---
+
+## 4. Sidebar logo/title should navigate to Dashboard
+
+When the user clicks the NOC Monitor logo/icon/title in the sidebar:
+
+- Navigate to Dashboard
+- Same behavior as clicking the Dashboard menu item
+- Cursor should indicate it is clickable
+- Add subtle hover effect
+
+This must work both when sidebar is expanded and collapsed.
+
+---
+
+## 5. Add polished hover/elevation effects to top Overview cards
+
+Add a clean, professional hover/elevation effect to the four top Overview cards:
+
+- Total Sites
+- Avg Uptime
+- Avg Response Time
+- Open Incidents
+
+Let Replit choose the best subtle SaaS-style effect, but it should be professional.
+
+Suggested effect:
+- Slight shadow increase on hover
+- Slight translateY(-1px) or elevation
+- Smooth transition
+- No exaggerated animation
+- Works in both light and dark mode
+
+Do not change card logic.
+Only improve visual interaction.
+
+---
+
+## 6. Keep existing functionality
+
+Do not break:
+- sidebar collapse
+- navigation
+- monitoring pause/resume
+- add site
+- language selector
+- overview data
+- incident card
+
+After implementation, report:
+1. Where the incident shortcut button was removed from
+2. How sidebar bottom actions were styled
+3. How toolbar spacing changed
+4. How sidebar logo navigation was implemented
+5. What hover effect was added to overview cards

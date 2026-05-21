@@ -1,0 +1,48 @@
+import { Router, type IRouter } from "express";
+import healthRouter from "./health";
+import sitesRouter from "./sites";
+import incidentsRouter from "./incidents";
+import dashboardRouter from "./dashboard";
+import dnsRouter from "./dns";
+import dnsResolversRouter from "./dns-resolvers";
+import dnsPerformanceRouter from "./dns-performance";
+import logsRouter from "./logs";
+import adminRouter from "./admin";
+import monitorRouter from "./monitor";
+import settingsRouter from "./settings";
+import authRouter from "./auth";
+import usersRouter from "./users";
+import auditRouter from "./audit";
+import notificationsRouter from "./notifications";
+import eventsRouter from "./events";
+import gatewaysRouter from "./gateways";
+import retentionRouter from "./retention";
+import sslTargetsRouter from "./ssl-targets";
+import serversRouter from "./servers";
+import connectivityRouter from "./connectivity";
+
+const router: IRouter = Router();
+
+router.use(healthRouter);
+router.use(authRouter);
+router.use(sitesRouter);
+router.use(incidentsRouter);
+router.use(dashboardRouter);
+router.use(dnsRouter);
+router.use(dnsResolversRouter);
+router.use(dnsPerformanceRouter);
+router.use("/logs", logsRouter);
+router.use(adminRouter);
+router.use(monitorRouter);
+router.use(settingsRouter);
+router.use(usersRouter);
+router.use(auditRouter);
+router.use(notificationsRouter);
+router.use(eventsRouter);
+router.use(gatewaysRouter);
+router.use(retentionRouter);
+router.use(sslTargetsRouter);
+router.use(serversRouter);
+router.use(connectivityRouter);
+
+export default router;
